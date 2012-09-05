@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>WebGL demo</title>
+    
+    <script type="text/javascript" src="gl-matrix-min.js" ></script>
+	
+    <script id="shader-fs" type="x-shader/x-fragment">
+    precision mediump float;
+    
+    varying vec4 vColor;
+
+    void main(void) {
+        gl_FragColor = vColor;//vec4(1.0, 1.0, 1.0, 1.0);        
+    }
+    </script>
+    
+    <script id="shader-vs" type="x-shader/x-vertex">
+    attribute vec3 aVertexPosition;
+    attribute vec4 aVertexColor;
+
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+    
+    varying vec4 vColor;
+
+    void main(void) {
+        gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+        vColor = aVertexColor;
+    }
+    </script>
+    
+	<script type="text/javascript">
+	function requestAnimationFrame(drawScene){ // Argument is the function to draw	    
+	
+	    if (window.webkitRequestAnimationFrame){
+            window.webkitRequestAnimationFrame(drawScene);
+            return;
+        }
+            
+        if (window.mozRequestAnimationFrame){
+            window.mozRequestAnimationFrame(drawScene);
+            return;
+        }
+        
+        if (window.requestAnimationFrame){
+	        window.requestAnimationFrame(drawScene);
+	        return;
+	    }
+    }
+	
+    // GL - The ultimate globals party!
+    
+    var gl;
+    function initGL(canvas){
+        try {
+            gl = canvas.getContext("experimental-webgl");
+            gl.viewportWidth = canvas.width;
+            gl.viewportHeight = canvas.height;
+            
+        } catch (e) {
+            // Put webgl fail stuff here?
+        }
+        if (!gl){
+            alert("Could not initialize WebGL, sorry :( ");
+        }
+    }
+    
+    // Shaderses!!!!
+    function getShader(gl, id){
+        var shaderScript = document.getElementById(id);
+        if (!shaderScript){
+            return null;
+        }
+        
+        // Just parse the text of the shader
+        var str = "";
+        var k = shaderScript.firstChild;
+        while (k) {
+            // 3 - TEXT_NODE
+            if (k.nodeType == 3){
+                str += k.textContent;
+            }
+            k = k.nextSibling;
+        }
+        
+        var shader;
+        if (shaderScript.type == "x-shader/x-fragment") {
+            shader = gl.createShader(gl.FRAGMENT_SHADER);
+            
+        } else if (shaderScript.type == "x-shader/x-vertex") {
+            shader = gl.createShader(gl.VERTEX_SHADER);
+            
+        } else {
+            return null;
+        }
+        
+        gl.shaderSource(shader, str);
+        gl.compileShader(shader);
+        
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(shader));
+            return null;
+        }
+        
+        return shader;
+    }
+    
+    var shaderProgram;
+    function initShaders() {
+        var fragmentShader = getShader(gl, "shader-fs");
+        var vertexShader = getShader(gl, "shader-vs");
+        
+        shaderProgram = gl.createProgram();
+        gl.attachShader(shaderProgram, vertexShader);
+        gl.attachShader(shaderProgram, fragmentShader);
+        gl.linkProgram(shaderProgram);
+        
+        if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)){
+            alert("could not initialize shaders");
+        }
+        
+        gl.useProgram(shaderProgram);
+        
+        // new field        
+        shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+        shaderProgram.vertexColorAttribute = gl.getAttribLocation(shaderProgram, "aVertexColor");
+        
+        // Provide values for attribute with an array
+        gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+        gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute)
+        
+        shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+        shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+           
+    }
+    
+    // Model-view matrix (movement/rotation)
+    var mvMatrix = mat4.create();
+    
+    // Stack of matrix states. Yay for data structures!
+    var mvMatrixStack = [];
+    
+    // Projection matrix
+    var pMatrix = mat4.create();
+	
+    function setMatrixUniforms() {
+        // Use the projection and model-view matrices in changing vertex position
+        gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+        gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+    }
+    
+    function mvPopMatrix(){
+    	if (mvMatrixStack.length == 0) {
+      		throw "Invalid popMatrix!";
+    	}
+    	mvMatrix = mvMatrixStack.pop();
+    }
+    
+    function mvPushMatrix(){
+    	var copy = mat4.create();
+    	mat4.set(mvMatrix, copy);
+    	mvMatrixStack.push(copy);
+    }
+    
+    var triangleVertexPositionBuffer;
+    var triangleVertexColorBuffer;
+    
+	var squareVertexPositionBuffer;
+	var squareVertexColorBuffer;
+	var squareVertexIndexBuffer;
+      
+	function initBuffers(){
+		//
+		// Create a triangle
+		//
+		triangleVertexPositionBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
+		
+		var vertices = [
+			// Front face
+			 0.0,  1.0,  0.0,
+			-1.0, -1.0,  1.0,
+			 1.0, -1.0,  1.0,
+			 
+			// Right Face
+			 0.0,  1.0,  0.0,
+			 1.0, -1.0,  1.0,
+			 1.0, -1.0, -1.0,
+			 
+			// Back face
+			 0.0,  1.0,  0.0,
+			 1.0, -1.0, -1.0,
+			-1.0, -1.0, -1.0,
+			
+			// Left Face
+			 0.0,  1.0,  0.0,
+			-1.0, -1.0, -1.0,
+			-1.0, -1.0,  1.0
+			 
+		];
+		
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+		
+		// Set some of our own properties on the gl buffer object
+		triangleVertexPositionBuffer.itemSize = 3;
+		triangleVertexPositionBuffer.numItems = 12;
+		
+		
+		//
+		// Set the triangle's color
+		//
+		
+		triangleVertexColorBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexColorBuffer);
+		
+		var vertex_colors =
+		[
+			// Front Face
+		    1.0, 0.0, 0.0, 1.0,
+		    0.0, 1.0, 0.0, 1.0,
+		    0.0, 0.0, 1.0, 1.0,
+		    
+		    // Right Face
+		    0.0, 0.0, 0.1, 1.0,
+		    0.0, 0.0, 0.1, 1.0,
+		    0.0, 0.0, 0.1, 1.0,
+		    
+		    // Back Face
+		    0.0, 1.0, 0.0, 1.0,
+		    0.0, 1.0, 0.0, 1.0,
+		    0.0, 1.0, 0.0, 1.0,
+		    
+		    // Left Face
+		    1.0, 0.0, 0.0, 1.0,
+		    1.0, 0.0, 0.0, 1.0,
+		    1.0, 0.0, 0.0, 1.0,
+		    1.0, 0.0, 0.0, 1.0,
+		];
+		
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertex_colors), gl.STATIC_DRAW);
+		
+		triangleVertexColorBuffer.itemSize = 4;
+		triangleVertexColorBuffer.numItems = 3
+		
+		
+		//
+		// Create a square
+		//
+		
+		squareVertexPositionBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
+		
+		vertices = [
+      // Front face
+      -1.0, -1.0,  1.0,
+       1.0, -1.0,  1.0,
+       1.0,  1.0,  1.0,
+      -1.0,  1.0,  1.0,
+
+      // Back face
+      -1.0, -1.0, -1.0,
+      -1.0,  1.0, -1.0,
+       1.0,  1.0, -1.0,
+       1.0, -1.0, -1.0,
+
+      // Top face
+      -1.0,  1.0, -1.0,
+      -1.0,  1.0,  1.0,
+       1.0,  1.0,  1.0,
+       1.0,  1.0, -1.0,
+
+      // Bottom face
+      -1.0, -1.0, -1.0,
+       1.0, -1.0, -1.0,
+       1.0, -1.0,  1.0,
+      -1.0, -1.0,  1.0,
+
+      // Right face
+       1.0, -1.0, -1.0,
+       1.0,  1.0, -1.0,
+       1.0,  1.0,  1.0,
+       1.0, -1.0,  1.0,
+
+      // Left face
+      -1.0, -1.0, -1.0,
+      -1.0, -1.0,  1.0,
+      -1.0,  1.0,  1.0,
+      -1.0,  1.0, -1.0,
+    ];
+        
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+        
+        // Set our own properties for later
+        squareVertexPositionBuffer.itemSize = 3;
+        squareVertexPositionBuffer.numItems = 4;
+        
+        //
+        // Color the square
+        //      
+        
+        squareVertexColorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexColorBuffer);
+        
+        // We'll generate the squares colors, since they're repetetive
+        var vertex_colors = [];
+        for (var i = 0; i < 24; i++){
+            vertex_colors = vertex_colors.concat([0.5, 0.5, 1.0, 1.0]);
+        }
+        
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertex_colors), gl.STATIC_DRAW);
+        
+        // More properties
+        squareVertexColorBuffer.itemSize = 4;
+        squareVertexColorBuffer.numItems = 24;
+        
+        squareVertexIndexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, squareVertexIndexBuffer);
+        
+        var cubeVertexIndices = [
+      0, 1, 2,      0, 2, 3,    // Front face
+      4, 5, 6,      4, 6, 7,    // Back face
+      8, 9, 10,     8, 10, 11,  // Top face
+      12, 13, 14,   12, 14, 15, // Bottom face
+      16, 17, 18,   16, 18, 19, // Right face
+      20, 21, 22,   20, 22, 23  // Left face
+    ]
+        
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(cubeVertexIndices), gl.STATIC_DRAW);
+        squareVertexIndexBuffer.itemSize = 1;
+        squareVertexIndexBuffer.numItems = 36;
+        
+        	
+	}
+    
+    var rotationAngle = 1;
+    var time;
+    
+    function drawScene(){
+        // Set the viewport
+        gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+        
+        // Clear the canvas
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        
+        // Set up the view frustum
+        // args:
+        // 45 degrees vertical FOV
+        // Width/Height ratio
+        // Near clipping 0.1 gl units
+        // Far clipping 100 gl units
+        // Projection matrix
+        mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+        
+        // Set movement matrix to identity
+        mat4.identity(mvMatrix);
+        
+        // 1.5 to left, 7.0 in (OpenGL uses right-hand rule)
+        mat4.translate(mvMatrix, [-1.5, 0.0, -7.0]);
+        
+        mvPushMatrix();
+        // Rotate to animate
+        mat4.rotateY(mvMatrix, rotationAngle);
+        
+        // Bind the triangle buffer
+        gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
+        
+        // Use this for vertex positions
+        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, triangleVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        
+        // Set the vertex color attribute for the triangle
+        gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexColorBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, triangleVertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        
+        // Take account of current model-view matrix and projection matrix
+        setMatrixUniforms();
+        
+        gl.drawArrays(gl.TRIANGLES, 0, triangleVertexPositionBuffer.numItems);
+        
+        // Unrotate 
+        //mat4.rotateY(mvMatrix, -rotationAngle);
+        mvPopMatrix();
+        
+        // Move 3 units to the right from our previous position
+        mat4.translate(mvMatrix, [3.0, 0.0, 0.0]);
+        mat4.rotateY(mvMatrix, rotationAngle);
+        
+        gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
+        
+        // Vertex Position Attribute sends the data of every vertex to the vertex shader
+        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, squareVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        
+        //Set the square's colors
+        gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexColorBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexColorAttribute, squareVertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        
+        // Take account of mvTranslate
+        setMatrixUniforms();
+   
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, squareVertexIndexBuffer);
+        setMatrixUniforms();   
+        gl.drawElements(gl.TRIANGLES, squareVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+        
+        n = (new Date()).getTime();      
+        rotationAngle += 2 * (n - time) / 1000;
+        time = n;
+        
+        requestAnimationFrame(drawScene);
+    }   
+	
+	function webGLStart(){
+		var canvas = document.getElementById("gl_canvas");
+		initGL(canvas);
+		initShaders();
+		initBuffers();
+		
+		gl.clearColor(0.0, 0.0, 0.0, 1.0);
+		gl.enable(gl.DEPTH_TEST);
+		
+        time = (new Date()).getTime();
+        drawScene();
+	}
+    
+	
+	</script>
+</head>
+<body onload="webGLStart();">
+	<h1>This is a demo of WebGL - 3D acceleration in the Browser</h1>
+	<canvas id="gl_canvas" width="500" height="500">
+	Your browser does not support HTML5. Please install a browser that supports Canvas and WebGL
+	</canvas>	
+</body>
+</html>

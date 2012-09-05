@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+
+<html>
+
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <title>
+            WaveFront OBJ viewer
+        </title>
+		
+		<!-- Shader scripts - storing them in a local file is messy -->
+		
+		<script id="shader-fs" type="x-shader/x-fragment">
+		precision mediump float;
+		
+		varying vec2 vTextureCoord;
+		
+		uniform sampler2D uSampler;
+
+		void main(void) {
+			gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+		  
+		}
+		</script>
+		
+		<script id="shader-vs" type="x-shader/x-vertex">
+		attribute vec3 aVertexPosition;
+		attribute vec2 aTextureCoord;
+
+		
+		uniform mat4 uMVMatrix;
+		uniform mat4 uPMatrix;
+		
+		varying vec2 vTextureCoord;
+
+		void main(void) {
+			gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+			vTextureCoord = aTextureCoord;
+		}
+		</script>
+        
+        <script type="text/javascript" src="jquery-1.8.0.min.js"></script>
+		<script type="text/javascript" src="gl-matrix-min.js"></script>
+        <script type="text/javascript" src="modelview.js"></script>
+        
+        <script type="text/javascript">
+            function test(){
+                console.log("Boo");
+            }
+        </script>
+        
+        <script type="text/javascript">
+            function errlog(msg){
+                //Disable this and all calls to it in production
+                if (typeof console != 'undefined') {
+                    console.log(msg);
+									
+					
+                }
+            }
+            
+            function loadModel(){
+                errlog(typeof document.getElementById("loadFile"));
+                errlog(typeof document.getElementById("loadFile"));
+                arr = readObj(document.getElementById("loadFile").files[0]);
+                initBuffers(arr[1], arr[0]);
+                errlog(arr);
+
+				
+            }
+			
+			function parseHtmlToString(id){
+				var shaderScript = document.getElementById(id);
+				if (!shaderScript){
+					return null;
+				}
+				
+				// Just parse the text of the shader
+				var str = "";
+				var k = shaderScript.firstChild;
+				while (k) {
+					// 3 - TEXT_NODE
+					if (k.nodeType == 3){
+						str += k.textContent;
+					}
+					k = k.nextSibling;
+				}
+				
+				return str;
+			}
+        
+            $(document).ready(function (){
+                errlog("This is a test");   
+
+				var fragmentShader = parseHtmlToString("shader-fs");
+				var vertexShader = parseHtmlToString("shader-vs");
+				
+				// Start GL
+				initGL($("#game-view")[0]);				
+				
+				// Try to load shaders, check if we're getting the shader text correctly
+				initShaders(vertexShader, fragmentShader);
+				
+			    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+                gl.enable(gl.DEPTH_TEST);				
+            });
+            
+        </script>
+        
+        <style type="text/css">
+            body{
+                background-color: #f0f0f0;
+            }
+            #game-view{
+                background-color: #ffffff;
+            }
+            
+        </style>
+        
+    </head>
+
+    <body>
+        <canvas id="game-view" width="800px" height="600px">
+            <p>Your browser does not support the canvas element. Please upgrade to Mozilla Firefox</p>
+        </canvas>
+        
+        <input id="loadFile" type="file"></input>
+        <a href="javascript:loadModel()">Load the OBJ model</a>
+        
+    </body>
+    
+</html>
