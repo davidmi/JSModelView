@@ -1,5 +1,5 @@
 attribute vec3 aVertexPosition;
-attribute vec2 aTextureCoord;
+//attribute vec2 aTextureCoord;
 
 
 uniform mat4 uMVMatrix;
@@ -9,5 +9,7 @@ varying vec2 vTextureCoord;
 
 void main(void) {
 	gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
-	vTextureCoord = aTextureCoord;
+	
+	// Pass variables to fragment shader
+	//vTextureCoord = aTextureCoord;
 }

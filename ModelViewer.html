@@ -8,35 +8,25 @@
             WaveFront OBJ viewer
         </title>
 		
-		<!-- Shader scripts - storing them in a local file is messy -->
+		<!-- Shader programs - storing them in a local file is messy -->
 		
 		<script id="shader-fs" type="x-shader/x-fragment">
-		precision mediump float;
-		
-		varying vec2 vTextureCoord;
-		
-		uniform sampler2D uSampler;
+			precision mediump float;
 
-		void main(void) {
-			gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
-		  
-		}
+			void main(void) {
+				gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+			}
 		</script>
-		
+
 		<script id="shader-vs" type="x-shader/x-vertex">
-		attribute vec3 aVertexPosition;
-		attribute vec2 aTextureCoord;
+			attribute vec3 aVertexPosition;
 
-		
-		uniform mat4 uMVMatrix;
-		uniform mat4 uPMatrix;
-		
-		varying vec2 vTextureCoord;
+			uniform mat4 uMVMatrix;
+			uniform mat4 uPMatrix;
 
-		void main(void) {
-			gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
-			vTextureCoord = aTextureCoord;
-		}
+			void main(void) {
+				gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+			}
 		</script>
         
         <script type="text/javascript" src="jquery-1.8.0.min.js"></script>
@@ -63,7 +53,10 @@
                 errlog(typeof document.getElementById("loadFile"));
                 errlog(typeof document.getElementById("loadFile"));
                 arr = readObj(document.getElementById("loadFile").files[0]);
-                initBuffers(arr[1], arr[0]);
+                initBuffers(arr[2], arr[3]);
+                
+                
+                
                 errlog(arr);
 
 				
@@ -102,7 +95,9 @@
 				initShaders(vertexShader, fragmentShader);
 				
 			    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-                gl.enable(gl.DEPTH_TEST);				
+                gl.enable(gl.DEPTH_TEST);
+                
+                //renderLoop();				
             });
             
         </script>
