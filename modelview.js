@@ -180,16 +180,8 @@ function mvPushMatrix(){
 }
 
 
-
-// Read a file in the Wavefront OBJ format
-function readObj(file){
-    
-    var reader = new FileReader();
-    reader.readAsText(file);
-    
-    errlog(reader);
-    
-    var lines = reader.result.split('\n');
+function loadObj(e){
+	var lines = e.target.result.split('\n');
     
     var vertices = [];
     var tris = [];
@@ -210,9 +202,9 @@ function readObj(file){
         
         if (params[0] == 'f'){
             if (params.length < 4){ // It's a triangle
-                tris[tris.length] = vertices[parseInt(params[1])];
-                tris[tris.length] = vertices[parseInt(params[2])];
-                tris[tris.length] = vertices[parseInt(params[3])];
+                tris[tris.length] = vertices[3*parseInt(params[1])];
+                tris[tris.length] = vertices[3*parseInt(params[2])];
+                tris[tris.length] = vertices[3*parseInt(params[3])];
                 
                 vertexIndices[vertexIndices.length] = parseInt(params[1]) - 1;
                 vertexIndices[vertexIndices.length] = parseInt(params[2]) - 1;
@@ -220,11 +212,30 @@ function readObj(file){
                 
             }
             
-            else{ // It's a quad. We won't support any other geometry
-                quads[quads.length] = vertices[parseInt(params[1])];
-                quads[quads.length] = vertices[parseInt(params[2])];
-                quads[quads.length] = vertices[parseInt(params[3])];
-                quads[quads.length] = vertices[parseInt(params[4])];
+            else{ // It's a quad.
+            
+            	for (var j = 0; j < 3; j++){
+            		tris[tris.length] = vertices[3*parseInt(params[1] - 1) + j];
+            	}
+            	for (var j = 0; j < 3; j++){
+            		tris[tris.length] = vertices[3*parseInt(params[2] - 1) + j];
+            	}
+            	for (var j = 0; j < 3; j++){
+            		tris[tris.length] = vertices[3*parseInt(params[3] - 1) + j];
+            	}
+            	
+            	for (var j = 0; j < 3; j++){
+            		tris[tris.length] = vertices[3*parseInt(params[3] - 1) + j];
+            	}
+            	
+            	for (var j = 0; j < 3; j++){
+            		tris[tris.length] = vertices[3*parseInt(params[4] - 1) + j];
+            	}
+            	
+            	for (var j = 0; j < 3; j++){
+            		tris[tris.length] = vertices[3*parseInt(params[1] - 1) + j];
+            	}
+            	
                 
                 // Assuming the quad is specified in circumferential order
                 vertexIndices[vertexIndices.length] = parseInt(params[1]) - 1;
@@ -240,19 +251,39 @@ function readObj(file){
     }
     
     errlog('vertices: ' + vertices);
-    return [tris, quads, vertices, vertexIndices];
+    initBuffers(vertices, vertexIndices, tris);
+    //return [tris, quads, vertices, vertexIndices];
+}
+
+
+// Read a file in the Wavefront OBJ format
+function readObj(file){
+    
+    var reader = new FileReader();
+    reader.onload = loadObj;
+    reader.readAsText(file);
+    
+    errlog(reader);
+    
+    
 }
 
 // The geometry and other data will later be moved into an Object3d
-var triBuffer = null;
-var indexBuffer = null;
+var triBuffer;
+var inOrderTriBuffer;
+var indexBuffer;
 var doneLoading = false;
 
-function initBuffers(vertices, vertexIndices){
+var modelData;
+var model;
+
+function initBuffers(vertices, vertexIndices, tris){
     doneLoading = false;
     
     if (vertices.length >= 3){
-    	/*
+    
+    	modelData = tris;
+    
         triBuffer = gl.createBuffer();
         
         gl.bindBuffer(gl.ARRAY_BUFFER, triBuffer);
@@ -261,7 +292,7 @@ function initBuffers(vertices, vertexIndices){
         errlog(vertices);
         errlog(vertexIndices);
         
-        triBuffer.numItems = vertices.length/9;
+        triBuffer.numItems = vertices.length/3;
         triBuffer.itemSize = 3;
         
         indexBuffer = gl.createBuffer();
@@ -270,70 +301,12 @@ function initBuffers(vertices, vertexIndices){
         indexBuffer.itemSize = 1;
         indexBuffer.numItems = vertexIndices.length;
         
-        doneLoading = true;
-        */
+        inOrderTriBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, inOrderTriBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(tris), gl.STATIC_DRAW);
         
-        var vertices1 = [
-		  // Front face
-		  -1.0, -1.0,  1.0,
-		   1.0, -1.0,  1.0,
-		   1.0,  1.0,  1.0,
-		  -1.0,  1.0,  1.0,
-		   
-		  // Back face
-		  -1.0, -1.0, -1.0,
-		  -1.0,  1.0, -1.0,
-		   1.0,  1.0, -1.0,
-		   1.0, -1.0, -1.0,
-		   
-		  // Top face
-		  -1.0,  1.0, -1.0,
-		  -1.0,  1.0,  1.0,
-		   1.0,  1.0,  1.0,
-		   1.0,  1.0, -1.0,
-		   
-		  // Bottom face
-		  -1.0, -1.0, -1.0,
-		   1.0, -1.0, -1.0,
-		   1.0, -1.0,  1.0,
-		  -1.0, -1.0,  1.0,
-		   
-		  // Right face
-		   1.0, -1.0, -1.0,
-		   1.0,  1.0, -1.0,
-		   1.0,  1.0,  1.0,
-		   1.0, -1.0,  1.0,
-		   
-		  // Left face
-		  -1.0, -1.0, -1.0,
-		  -1.0, -1.0,  1.0,
-		  -1.0,  1.0,  1.0,
-		  -1.0,  1.0, -1.0
-		];
-		
-		triBuffer = gl.createBuffer();
-		
-		gl.bindBuffer(gl.ARRAY_BUFFER, triBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices1), gl.STATIC_DRAW);
-        
-        //triBuffer.numItems = vertices.length/9;
-        triBuffer.itemSize = 3;
-        
-        var Indices = [
-  0,  1,  2,      0,  2,  3,    // front
-  4,  5,  6,      4,  6,  7,    // back
-  8,  9,  10,     8,  10, 11,   // top
-  12, 13, 14,     12, 14, 15,   // bottom
-  16, 17, 18,     16, 18, 19,   // right
-  20, 21, 22,     20, 22, 23    // left
-];
-        
-        indexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(Indices), gl.STATIC_DRAW);
-        
-        indexBuffer.numItems = vertexIndices.length;
-        indexBuffer.itemSize = 1;
+        inOrderTriBuffer.itemSize = 3;
+        inOrderTriBuffer.numItems = tris.length/3;
         
         doneLoading = true;
         
@@ -343,13 +316,75 @@ function initBuffers(vertices, vertexIndices){
 }
 
 //
+// Object definitions
+//
+
+
+// ## Class Object3d
+
+
+
+function Object3d(options){ //later, normals, colors, uv, etc
+	//TODO: Change args to object 
+	if (options == undefined){
+		options = {};
+	}
+	this.tris = options.triArray || [];
+	this.triangleBuffer = gl.createBuffer();
+        
+    if (this.tris.length > 2) {
+    	gl.bindBuffer(gl.ARRAY_BUFFER, this.triangleBuffer);
+    	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.tris), gl.STATIC_DRAW);
+    }
+    
+    this.triangleBuffer.numItems = this.tris.length/3;
+    this.triangleBuffer.itemSize = 3;
+    
+	this.x = options.x || 0;
+	this.y = options.y || 0;
+	this.z = options.z || 0;
+	
+	this.xRot = (options.xRot || 0)/180*Math.PI%(2*Math.PI);
+	this.yRot = (options.yRot || 0)/180*Math.PI%(2*Math.PI);
+	this.zRot = (options.zRot || 0)/180*Math.PI%(2*Math.PI);
+}
+
+Object3d.prototype.draw = function(){
+	mvPushMatrix();
+	
+	mat4.translate(mvMatrix, [this.x, this.y, this.z]);
+	mat4.rotateX(mvMatrix, this.xRot);
+	mat4.rotateY(mvMatrix, this.yRot);
+	mat4.rotateZ(mvMatrix, this.zRot);
+	
+	if (this.tris.length > 2){
+		gl.bindBuffer(gl.ARRAY_BUFFER, this.triangleBuffer);
+    	gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, this.triangleBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    	setMatrixUniforms();
+    	gl.drawArrays(gl.TRIANGLES, 0, this.triangleBuffer.numItems);
+	}
+	
+	mvPopMatrix();
+}
+
+// ## End Class Object3d
+
+
+
+
+// ## End Class Drawable3d
+
+//
 // The main loop, running in it's own (pseudo?)thread
 //
 
 function renderLoop(){
+
+
     // Set the viewport
     gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
-    
+	
+	gl.clearColor(0.0, 0.0, 0.0, 1.0);    
     // Clear the canvas
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
      
@@ -364,12 +399,24 @@ function renderLoop(){
     
     // Set movement matrix to identity
     mat4.identity(mvMatrix);
-    mat4.translate(mvMatrix, [-1.5, 0.0, -8.0]);
+    mat4.translate(mvMatrix, [0, 0.0, -8.0]);
     
     errlog("Found data");
+    
+    model = new Object3d({triArray: modelData, x: 1, y: 0});
+    
+    model.draw();
      
     if (doneLoading){
         if (triBuffer != null){
+			/*
+        	//mat4.translate(mvMatrix, [3.0, 0, 0]);
+        	gl.bindBuffer(gl.ARRAY_BUFFER, inOrderTriBuffer);
+        	gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, inOrderTriBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        	setMatrixUniforms();
+        	gl.drawArrays(gl.TRIANGLES, 0, inOrderTriBuffer.numItems);
+        
+        
         	errlog("Got tris");
             gl.bindBuffer(gl.ARRAY_BUFFER, triBuffer);
             
@@ -386,10 +433,8 @@ function renderLoop(){
         	setMatrixUniforms();
         
         	// as opposed to gl.drawArrays
-        	gl.drawElements(gl.TRIANGLES, 0, indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-        	errlog(indexBuffer.numItems);
-        	errlog(indexBuffer);
-        	errlog("pMat: " + shaderProgram.pMatrixUniform + " mvMat: " + shaderProgram.mvMatrixUniform);
+        	//gl.drawElements(gl.TRIANGLES, 0, indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+        	*/
             
         }
      }

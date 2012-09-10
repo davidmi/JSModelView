@@ -14,7 +14,7 @@
 			precision mediump float;
 
 			void main(void) {
-				gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+				gl_FragColor = vec4(1.0, 0.0, 1.0, 1.0);
 			}
 		</script>
 
@@ -52,14 +52,8 @@
             function loadModel(){
                 errlog(typeof document.getElementById("loadFile"));
                 errlog(typeof document.getElementById("loadFile"));
-                arr = readObj(document.getElementById("loadFile").files[0]);
-                initBuffers(arr[2], arr[3]);
-                
-                
-                
-                errlog(arr);
-
-				
+                readObj(document.getElementById("loadFile").files[0]);
+                //initBuffers(arr[2], arr[3]);			
             }
 			
 			function parseHtmlToString(id){
