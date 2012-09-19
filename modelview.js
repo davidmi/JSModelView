@@ -35,9 +35,9 @@
 
 //Disable this and all calls to it in production
 function errlog(msg){
-	if (typeof console != 'undefined') {
-		console.log(msg);
-	}
+    if (typeof console != 'undefined') {
+        console.log(msg);
+    }
 }
 
 //
@@ -57,31 +57,55 @@ var mvMatrixStack = [];
 // Projection matrix
 var pMatrix = mat4.create();
 
+// Key states
+var pressedKeys = [];
+
+//
+// Util functions
+//
+
+function radians(rotationDegrees){
+    return rotationDegrees/180*Math.PI%(2*Math.PI);
+}
+
+function degrees(rotationRadians){
+    return rotationRadians/Math.PI*180%(2*Math.PI);
+}   
+
+function handleKeyDown(event){
+    pressedKeys[event.keyCode] = true;
+}
+
+function handleKeyUp(event){
+    pressedKeys[event.keyCode] = false;
+}
+
+
 //
 // Run this function first - it'll get us our gl object
 // 
 
 function initGL(canvas){
-	try {
-		gl = canvas.getContext("experimental-webgl");
-		gl.viewportWidth = canvas.width;
-		gl.viewportHeight = canvas.height;
-		
-	} catch (e) {
-		// Put webgl fail stuff here?
-	}
-	if (!gl){
-		alert("Could not initialize WebGL, sorry :( ");
-	}
+    try {
+        gl = canvas.getContext("experimental-webgl");
+        gl.viewportWidth = canvas.width;
+        gl.viewportHeight = canvas.height;
+        
+    } catch (e) {
+        // Put webgl fail stuff here?
+    }
+    if (!gl){
+        alert("Could not initialize WebGL, sorry :( ");
+    }
 }
 
 //
 // Utility functions
 //
 
-function requestAnimationFrame(drawScene){ // Argument is the function to draw	    
-	
-	    if (window.webkitRequestAnimationFrame){
+function requestAnimationFrame(drawScene){ // Argument is the function to draw      
+    
+        if (window.webkitRequestAnimationFrame){
             window.webkitRequestAnimationFrame(drawScene);
             return;
         }
@@ -92,9 +116,9 @@ function requestAnimationFrame(drawScene){ // Argument is the function to draw
         }
         
         if (window.requestAnimationFrame){
-	        window.requestAnimationFrame(drawScene);
-	        return;
-	    }
+            window.requestAnimationFrame(drawScene);
+            return;
+        }
 }
 
 
@@ -104,84 +128,84 @@ function requestAnimationFrame(drawScene){ // Argument is the function to draw
 
 // Shaderses!!!! - Fix this to use the ajax text files vertex_shader.txt and fragment_shader.txt
 function getShader(gl, str, mime){
-	
-	var shader;
-	if (mime == "x-shader/x-fragment") {
-		shader = gl.createShader(gl.FRAGMENT_SHADER);
-		
-	} else if (mime == "x-shader/x-vertex") {
-		shader = gl.createShader(gl.VERTEX_SHADER);
-		
-	} else {
-		return null;
-	}
-	
-	gl.shaderSource(shader, str);
-	gl.compileShader(shader);
-	
-	if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-		alert(gl.getShaderInfoLog(shader));
-		return null;
-	}
-	
-	return shader;
+    
+    var shader;
+    if (mime == "x-shader/x-fragment") {
+        shader = gl.createShader(gl.FRAGMENT_SHADER);
+        
+    } else if (mime == "x-shader/x-vertex") {
+        shader = gl.createShader(gl.VERTEX_SHADER);
+        
+    } else {
+        return null;
+    }
+    
+    gl.shaderSource(shader, str);
+    gl.compileShader(shader);
+    
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        alert(gl.getShaderInfoLog(shader));
+        return null;
+    }
+    
+    return shader;
 }
 
 
 // Fix this to use ajax as well
 function initShaders(vShaderText, fShaderText) {
-	var fragmentShader = getShader(gl, fShaderText, "x-shader/x-fragment");
-	var vertexShader = getShader(gl, vShaderText, "x-shader/x-vertex");
-	
-	shaderProgram = gl.createProgram();
-	gl.attachShader(shaderProgram, vertexShader);
-	gl.attachShader(shaderProgram, fragmentShader);
-	gl.linkProgram(shaderProgram);
-	
-	if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)){
-		alert("could not initialize shaders");
-	}
-	
-	gl.useProgram(shaderProgram);
-	
-	// new field        
-	shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
-	errlog("Got vertex position attribute " + shaderProgram.vertexPositionAttribute);
-	//shaderProgram.vertexTextureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
-	//errlog("Got tex coord attr: " + shaderProgram.vertexTextureCoordAttribute);
-	
-	// Provide values for attribute with an array
-	gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
-	//gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute)
-	
-	shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
-	shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
-	//shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
-	   
+    var fragmentShader = getShader(gl, fShaderText, "x-shader/x-fragment");
+    var vertexShader = getShader(gl, vShaderText, "x-shader/x-vertex");
+    
+    shaderProgram = gl.createProgram();
+    gl.attachShader(shaderProgram, vertexShader);
+    gl.attachShader(shaderProgram, fragmentShader);
+    gl.linkProgram(shaderProgram);
+    
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)){
+        alert("could not initialize shaders");
+    }
+    
+    gl.useProgram(shaderProgram);
+    
+    // new field        
+    shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+    errlog("Got vertex position attribute " + shaderProgram.vertexPositionAttribute);
+    //shaderProgram.vertexTextureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
+    //errlog("Got tex coord attr: " + shaderProgram.vertexTextureCoordAttribute);
+    
+    // Provide values for attribute with an array
+    gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+    //gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute)
+    
+    shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
+    shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+    //shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
+       
 }
 
 function setMatrixUniforms() {
-	// Use the projection and model-view matrices in changing vertex position
-	gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
-	gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+    // Use the projection and model-view matrices in changing vertex position
+    gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+    gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
 }
 
 function mvPopMatrix(){
-	if (mvMatrixStack.length == 0) {
-		throw "Invalid popMatrix!";
-	}
-	mvMatrix = mvMatrixStack.pop();
+    if (mvMatrixStack.length == 0) {
+        throw "Invalid popMatrix!";
+    }
+    mvMatrix = mvMatrixStack.pop();
 }
 
 function mvPushMatrix(){
-	var copy = mat4.create();
-	mat4.set(mvMatrix, copy);
-	mvMatrixStack.push(copy);
+    var copy = mat4.create();
+    mat4.set(mvMatrix, copy);
+    mvMatrixStack.push(copy);
 }
 
 
 function loadObj(e){
-	var lines = e.target.result.split('\n');
+    var lines = e.target.result.split('\n');
     
     var vertices = [];
     var tris = [];
@@ -214,28 +238,28 @@ function loadObj(e){
             
             else{ // It's a quad.
             
-            	for (var j = 0; j < 3; j++){
-            		tris[tris.length] = vertices[3*parseInt(params[1] - 1) + j];
-            	}
-            	for (var j = 0; j < 3; j++){
-            		tris[tris.length] = vertices[3*parseInt(params[2] - 1) + j];
-            	}
-            	for (var j = 0; j < 3; j++){
-            		tris[tris.length] = vertices[3*parseInt(params[3] - 1) + j];
-            	}
-            	
-            	for (var j = 0; j < 3; j++){
-            		tris[tris.length] = vertices[3*parseInt(params[3] - 1) + j];
-            	}
-            	
-            	for (var j = 0; j < 3; j++){
-            		tris[tris.length] = vertices[3*parseInt(params[4] - 1) + j];
-            	}
-            	
-            	for (var j = 0; j < 3; j++){
-            		tris[tris.length] = vertices[3*parseInt(params[1] - 1) + j];
-            	}
-            	
+                for (var j = 0; j < 3; j++){
+                    tris[tris.length] = vertices[3*parseInt(params[1] - 1) + j];
+                }
+                for (var j = 0; j < 3; j++){
+                    tris[tris.length] = vertices[3*parseInt(params[2] - 1) + j];
+                }
+                for (var j = 0; j < 3; j++){
+                    tris[tris.length] = vertices[3*parseInt(params[3] - 1) + j];
+                }
+                
+                for (var j = 0; j < 3; j++){
+                    tris[tris.length] = vertices[3*parseInt(params[3] - 1) + j];
+                }
+                
+                for (var j = 0; j < 3; j++){
+                    tris[tris.length] = vertices[3*parseInt(params[4] - 1) + j];
+                }
+                
+                for (var j = 0; j < 3; j++){
+                    tris[tris.length] = vertices[3*parseInt(params[1] - 1) + j];
+                }
+                
                 
                 // Assuming the quad is specified in circumferential order
                 vertexIndices[vertexIndices.length] = parseInt(params[1]) - 1;
@@ -268,6 +292,69 @@ function readObj(file){
     
 }
 
+
+//
+// Object definitions
+//
+
+
+// ## Class Object3d
+
+
+
+function Object3d(options){ //later, normals, colors, uv, etc
+    //TODO: Change args to object 
+    if (options == undefined){
+        options = {};
+    }
+    this.tris = options.triArray || [];
+    this.triangleBuffer = gl.createBuffer();
+        
+    if (this.tris.length > 2) {
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.triangleBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.tris), gl.STATIC_DRAW);
+    }
+    
+    this.triangleBuffer.numItems = this.tris.length/3;
+    this.triangleBuffer.itemSize = 3;
+    
+    this.x = options.x || 0;
+    this.y = options.y || 0;
+    this.z = options.z || 0;
+    
+    this.xRot = (options.xRot || 0)/180*Math.PI%(2*Math.PI);
+    this.yRot = (options.yRot || 0)/180*Math.PI%(2*Math.PI);
+    this.zRot = (options.zRot || 0)/180*Math.PI%(2*Math.PI);
+
+}
+
+Object3d.prototype.draw = function(){
+    mvPushMatrix();
+    
+    mat4.translate(mvMatrix, [this.x, this.y, this.z]);
+    mat4.rotateX(mvMatrix, this.xRot);
+    mat4.rotateY(mvMatrix, this.yRot);
+    mat4.rotateZ(mvMatrix, this.zRot);
+    
+    if (this.tris.length > 2){
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.triangleBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, this.triangleBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        setMatrixUniforms();
+        gl.drawArrays(gl.TRIANGLES, 0, this.triangleBuffer.numItems);
+    }
+    
+    mvPopMatrix();
+
+    // Set update time
+}
+
+
+
+
+
+// ## End Class Drawable3d
+
+
 // The geometry and other data will later be moved into an Object3d
 var triBuffer;
 var inOrderTriBuffer;
@@ -282,7 +369,7 @@ function initBuffers(vertices, vertexIndices, tris){
     
     if (vertices.length >= 3){
     
-    	modelData = tris;
+        modelData = tris;
     
         triBuffer = gl.createBuffer();
         
@@ -310,81 +397,26 @@ function initBuffers(vertices, vertexIndices, tris){
         
         doneLoading = true;
         
-        renderLoop();
+        model = new Object3d({triArray: modelData, x: 1, y: 0});
+        
+        //renderLoop();
     }
      
 }
 
-//
-// Object definitions
-//
 
-
-// ## Class Object3d
-
-
-
-function Object3d(options){ //later, normals, colors, uv, etc
-	//TODO: Change args to object 
-	if (options == undefined){
-		options = {};
-	}
-	this.tris = options.triArray || [];
-	this.triangleBuffer = gl.createBuffer();
-        
-    if (this.tris.length > 2) {
-    	gl.bindBuffer(gl.ARRAY_BUFFER, this.triangleBuffer);
-    	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.tris), gl.STATIC_DRAW);
-    }
-    
-    this.triangleBuffer.numItems = this.tris.length/3;
-    this.triangleBuffer.itemSize = 3;
-    
-	this.x = options.x || 0;
-	this.y = options.y || 0;
-	this.z = options.z || 0;
-	
-	this.xRot = (options.xRot || 0)/180*Math.PI%(2*Math.PI);
-	this.yRot = (options.yRot || 0)/180*Math.PI%(2*Math.PI);
-	this.zRot = (options.zRot || 0)/180*Math.PI%(2*Math.PI);
-}
-
-Object3d.prototype.draw = function(){
-	mvPushMatrix();
-	
-	mat4.translate(mvMatrix, [this.x, this.y, this.z]);
-	mat4.rotateX(mvMatrix, this.xRot);
-	mat4.rotateY(mvMatrix, this.yRot);
-	mat4.rotateZ(mvMatrix, this.zRot);
-	
-	if (this.tris.length > 2){
-		gl.bindBuffer(gl.ARRAY_BUFFER, this.triangleBuffer);
-    	gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, this.triangleBuffer.itemSize, gl.FLOAT, false, 0, 0);
-    	setMatrixUniforms();
-    	gl.drawArrays(gl.TRIANGLES, 0, this.triangleBuffer.numItems);
-	}
-	
-	mvPopMatrix();
-}
-
-// ## End Class Object3d
-
-
-
-
-// ## End Class Drawable3d
 
 //
 // The main loop, running in it's own (pseudo?)thread
 //
-
+var lastTime;
+var timeNow;
 function renderLoop(){
-
-
+    
     // Set the viewport
     gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
-	
-	gl.clearColor(0.0, 0.0, 0.0, 1.0);    
+    
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);    
     // Clear the canvas
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
      
@@ -401,45 +433,60 @@ function renderLoop(){
     mat4.identity(mvMatrix);
     mat4.translate(mvMatrix, [0, 0.0, -8.0]);
     
-    errlog("Found data");
-    
-    model = new Object3d({triArray: modelData, x: 1, y: 0});
-    
-    model.draw();
+    //errlog("Found data");   
+
+    timeNow = new Date().getTime();
      
     if (doneLoading){
+        elapsedTime = timeNow - lastTime;
+        if (pressedKeys[38]){ // Up
+            model.xRot += Math.PI/3*elapsedTime/1000.0;
+        }
+        if (pressedKeys[40]){ // Down
+            model.xRot += -Math.PI/3*elapsedTime/1000.0;
+        }
+        if (pressedKeys[39]){ // Right
+            model.yRot += Math.PI/3*elapsedTime/1000.0;
+        }
+        if (pressedKeys[37]){ // Left
+            model.yRot += -Math.PI/3*elapsedTime/1000.0;
+        }
+        model.draw();
+        //console.log(model.xRot);
+        
         if (triBuffer != null){
-			/*
-        	//mat4.translate(mvMatrix, [3.0, 0, 0]);
-        	gl.bindBuffer(gl.ARRAY_BUFFER, inOrderTriBuffer);
-        	gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, inOrderTriBuffer.itemSize, gl.FLOAT, false, 0, 0);
-        	setMatrixUniforms();
-        	gl.drawArrays(gl.TRIANGLES, 0, inOrderTriBuffer.numItems);
+            /*
+            //mat4.translate(mvMatrix, [3.0, 0, 0]);
+            gl.bindBuffer(gl.ARRAY_BUFFER, inOrderTriBuffer);
+            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, inOrderTriBuffer.itemSize, gl.FLOAT, false, 0, 0);
+            setMatrixUniforms();
+            gl.drawArrays(gl.TRIANGLES, 0, inOrderTriBuffer.numItems);
         
         
-        	errlog("Got tris");
+            errlog("Got tris");
             gl.bindBuffer(gl.ARRAY_BUFFER, triBuffer);
             
             // Use this for vertex positions
-        	gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, triBuffer.itemSize, gl.FLOAT, false, 0, 0);
+            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, triBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-        	errlog("Vertex position attribute: " + shaderProgram.vertexPositionAttribute + " tribuffer itemsize: " + triBuffer.itemSize);
-        	errlog(triBuffer);
-        	
-        	// Index into the array data
-        	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-        	
-        	// Take account of current model-view matrix and projection matrix
-        	setMatrixUniforms();
+            errlog("Vertex position attribute: " + shaderProgram.vertexPositionAttribute + " tribuffer itemsize: " + triBuffer.itemSize);
+            errlog(triBuffer);
+            
+            // Index into the array data
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+            
+            // Take account of current model-view matrix and projection matrix
+            setMatrixUniforms();
         
-        	// as opposed to gl.drawArrays
-        	//gl.drawElements(gl.TRIANGLES, 0, indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-        	*/
+            // as opposed to gl.drawArrays
+            //gl.drawElements(gl.TRIANGLES, 0, indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+            */
             
         }
      }
      
-     //requestAnimationFrame(renderLoop);
+     requestAnimationFrame(renderLoop);
+     lastTime = timeNow;
 }
 
 

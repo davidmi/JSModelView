@@ -75,7 +75,8 @@
 				
 				return str;
 			}
-        
+
+		        
             $(document).ready(function (){
                 errlog("This is a test");   
 
@@ -91,7 +92,10 @@
 			    gl.clearColor(0.0, 0.0, 0.0, 1.0);
                 gl.enable(gl.DEPTH_TEST);
                 
-                //renderLoop();				
+		renderLoop();
+
+		document.onkeydown = handleKeyDown;
+		document.onkeyup = handleKeyUp;		
             });
             
         </script>
