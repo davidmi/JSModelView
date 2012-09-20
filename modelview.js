@@ -208,6 +208,7 @@ function loadObj(e){
     var lines = e.target.result.split('\n');
     
     var vertices = [];
+    var vertexNormals = [];
     var tris = [];
     var quads = [];
     
@@ -224,51 +225,80 @@ function loadObj(e){
             vertices[vertices.length] = parseFloat(params[3]);   
         }
         
+        if (params[0] == 'vn'){
+        	for (var j = 1; j < 4; j++){
+        		vertexNormals[vertexNormals.length] = parseFloat(params[j])
+        	}
+        }
+        
         if (params[0] == 'f'){
-            if (params.length < 4){ // It's a triangle
-                tris[tris.length] = vertices[3*parseInt(params[1])];
-                tris[tris.length] = vertices[3*parseInt(params[2])];
-                tris[tris.length] = vertices[3*parseInt(params[3])];
+            var vertexCoords = [];
+            var normalCoords = [];
+
+            for (var j = 1; j < params.length; j++){
+                var split = params[j].split("//");
+                vertexCoords[vertexCoords.length] = split[0];
+                if (split.length > 1){
+                    normalCoords[normalCoords.length] = split[1];
+                }
+            }
+            //console.log(vertexCoords);
+            if (vertexCoords.length < 4){ // It's a triangle
+                for (var j = 0; j < 9; j++){
+                    tris[tris.length] = vertices[3*parseInt(vertexCoords[0] - 1) + j];
+                }
+
+                for (var j = 0; j < 9; j++){
+                    tris[tris.length] = vertices[3*parseInt(vertexCoords[1] - 1) + j];
+                }
+
+                for (var j = 0; j < 9; j++){
+                    tris[tris.length] = vertices[3*parseInt(vertexCoords[2] - 1) + j];
+                }
+
+                //tris[tris.length] = vertices[3*parseInt(vertexCoords[0]) - 1];
+                //tris[tris.length] = vertices[3*parseInt(vertexCoords[1]) - 1];
+                //tris[tris.length] = vertices[3*parseInt(vertexCoords[2]) - 1];
                 
-                vertexIndices[vertexIndices.length] = parseInt(params[1]) - 1;
-                vertexIndices[vertexIndices.length] = parseInt(params[2]) - 1;
-                vertexIndices[vertexIndices.length] = parseInt(params[3]) - 1;
+                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[0]) - 1;
+                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[1]) - 1;
+                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[2]) - 1;
                 
             }
             
             else{ // It's a quad.
             
                 for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(params[1] - 1) + j];
+                    tris[tris.length] = vertices[3*parseInt(vertexCoords[0] - 1) + j];
                 }
                 for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(params[2] - 1) + j];
+                    tris[tris.length] = vertices[3*parseInt(vertexCoords[1] - 1) + j];
                 }
                 for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(params[3] - 1) + j];
-                }
-                
-                for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(params[3] - 1) + j];
+                    tris[tris.length] = vertices[3*parseInt(vertexCoords[2] - 1) + j];
                 }
                 
                 for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(params[4] - 1) + j];
+                    tris[tris.length] = vertices[3*parseInt(vertexCoords[2] - 1) + j];
                 }
                 
                 for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(params[1] - 1) + j];
+                    tris[tris.length] = vertices[3*parseInt(vertexCoords[3] - 1) + j];
+                }
+                
+                for (var j = 0; j < 3; j++){
+                    tris[tris.length] = vertices[3*parseInt(vertexCoords[0] - 1) + j];
                 }
                 
                 
                 // Assuming the quad is specified in circumferential order
-                vertexIndices[vertexIndices.length] = parseInt(params[1]) - 1;
-                vertexIndices[vertexIndices.length] = parseInt(params[2]) - 1; 
-                vertexIndices[vertexIndices.length] = parseInt(params[3]) - 1;
+                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[0]) - 1;
+                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[1]) - 1; 
+                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[2]) - 1;
                 
-                vertexIndices[vertexIndices.length] = parseInt(params[1]) - 1;
-                vertexIndices[vertexIndices.length] = parseInt(params[3]) - 1;
-                vertexIndices[vertexIndices.length] = parseInt(params[4]) - 1;
+                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[0]) - 1;
+                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[2]) - 1;
+                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[3]) - 1;
             
             }           
         }
