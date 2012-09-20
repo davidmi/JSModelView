@@ -210,6 +210,7 @@ function loadObj(e){
     var vertices = [];
     var vertexNormals = [];
     var tris = [];
+    var normals = [];
     var quads = [];
     
     var vertexIndices = [];
@@ -244,18 +245,17 @@ function loadObj(e){
             }
             //console.log(vertexCoords);
             if (vertexCoords.length < 4){ // It's a triangle
+                // Load vertices
                 for (var j = 0; j < 9; j++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[0] - 1) + j];
+                    tris[tris.length] = vertices[3*parseInt(vertexCoords[Math.floor(j/3)] - 1) + j];
                 }
 
-                for (var j = 0; j < 9; j++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[1] - 1) + j];
+                if (vertexNormals.length > 0){
+                    // Load vertex normals
+                    for (var j = 0; j < 9; j++){
+                        normals[normals.length] = vertexNormals[3*parseInt(normalCoords[Math.floor(j/3)] - 1) + j];
+                    }
                 }
-
-                for (var j = 0; j < 9; j++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[2] - 1) + j];
-                }
-
                 //tris[tris.length] = vertices[3*parseInt(vertexCoords[0]) - 1];
                 //tris[tris.length] = vertices[3*parseInt(vertexCoords[1]) - 1];
                 //tris[tris.length] = vertices[3*parseInt(vertexCoords[2]) - 1];
