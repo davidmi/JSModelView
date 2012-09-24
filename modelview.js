@@ -256,50 +256,36 @@ function loadObj(e){
                         normals[normals.length] = vertexNormals[3*parseInt(normalCoords[Math.floor(j/3)] - 1) + j];
                     }
                 }
-                //tris[tris.length] = vertices[3*parseInt(vertexCoords[0]) - 1];
-                //tris[tris.length] = vertices[3*parseInt(vertexCoords[1]) - 1];
-                //tris[tris.length] = vertices[3*parseInt(vertexCoords[2]) - 1];
                 
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[0]) - 1;
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[1]) - 1;
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[2]) - 1;
+                // Store the vertex indices, perhaps for later index-based rendering for quads
+                for (var j = 0; j < 3; j++){
+                    vertexIndices[vertexIndices.length] = parseInt(vertexCoords[j]);
+                }
                 
             }
             
             else{ // It's a quad.
+
+                // Order of vertices in a quad converted to two tris
+                vertexOrder=[ 0, 1, 2, 2, 3, 0];
             
-                for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[0] - 1) + j];
-                }
-                for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[1] - 1) + j];
-                }
-                for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[2] - 1) + j];
+                for (var j = 0; j < 3*6; j++){
+                    tris[tris.length] = vertices[3*parseInt(vertexCoords[vertexOrder[Math.floor(j/3)]] - 1) + j%3];
                 }
                 
-                for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[2] - 1) + j];
-                }
-                
-                for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[3] - 1) + j];
-                }
-                
-                for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[0] - 1) + j];
+                // Get vertex normals for quads
+                if (vertexNormals.length > 0){
+                    // get the first 3
+                    for (var j = 0; j < 3*6; j++){
+                        normals[normals.length] = vertexNormals[3*parseInt(normalCoords[vertexOrder[Math.floor(j/3)]] - 1) + j];
+                    }
                 }
                 
                 
                 // Assuming the quad is specified in circumferential order
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[0]) - 1;
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[1]) - 1; 
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[2]) - 1;
-                
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[0]) - 1;
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[2]) - 1;
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[3]) - 1;
-            
+                for (var j = 0; j < 6; j++){
+                    vertexIndices[vertexIndices.length] = parseInt(vertexCoords[vertexOrder[j]]);
+                }          
             }           
         }
     }
