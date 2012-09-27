@@ -338,8 +338,8 @@ function Object3d(options){ //later, normals, colors, uv, etc
         options = {};
     }
     this.tris = options.triArray || [];
-    this.triangleBuffer = gl.createBuffer();
-        
+    this.triangleBuffer = gl.createBuffer();  
+
     if (this.tris.length > 2) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.triangleBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.tris), gl.STATIC_DRAW);
