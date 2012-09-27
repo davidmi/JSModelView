@@ -170,7 +170,8 @@ function initShaders(vShaderText, fShaderText) {
     
     // new field        
     shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
-    errlog("Got vertex position attribute " + shaderProgram.vertexPositionAttribute);
+    shaderProgram.vertexNormalAttribute = gl.getAttribLocation(shaderProgram, "aVertexNormal");
+    //errlog("Got vertex position attribute " + shaderProgram.vertexPositionAttribute);
     //shaderProgram.vertexTextureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
     //errlog("Got tex coord attr: " + shaderProgram.vertexTextureCoordAttribute);
     
@@ -180,6 +181,7 @@ function initShaders(vShaderText, fShaderText) {
     
     shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
     shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
+    shaderProgram.nMatrixUniform = gl.getUniformLocation(shaderProgram, "uNMatrix");
     //shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
        
 }
@@ -188,6 +190,15 @@ function setMatrixUniforms() {
     // Use the projection and model-view matrices in changing vertex position
     gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
     gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
+
+    // Set the normal transform matrix for lighting
+    // @see http://www.arcsynthesis.org/gltut/Illumination/Tut09%20Normal%20Transformation.html
+    // @see http://learningwebgl.com/blog/?p=684
+
+    var normalMatrix = mat3.create();
+    mat4.toInverseMat3(mvMatrix, normalMatrix);
+    mat3.transpose(normalMatrix);
+    gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
 }
 
 function mvPopMatrix(){
@@ -256,56 +267,42 @@ function loadObj(e){
                         normals[normals.length] = vertexNormals[3*parseInt(normalCoords[Math.floor(j/3)] - 1) + j];
                     }
                 }
-                //tris[tris.length] = vertices[3*parseInt(vertexCoords[0]) - 1];
-                //tris[tris.length] = vertices[3*parseInt(vertexCoords[1]) - 1];
-                //tris[tris.length] = vertices[3*parseInt(vertexCoords[2]) - 1];
                 
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[0]) - 1;
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[1]) - 1;
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[2]) - 1;
+                // Store the vertex indices, perhaps for later index-based rendering for quads
+                for (var j = 0; j < 3; j++){
+                    vertexIndices[vertexIndices.length] = parseInt(vertexCoords[j]);
+                }
                 
             }
             
             else{ // It's a quad.
+
+                // Order of vertices in a quad converted to two tris
+                vertexOrder=[ 0, 1, 2, 2, 3, 0];
             
-                for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[0] - 1) + j];
-                }
-                for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[1] - 1) + j];
-                }
-                for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[2] - 1) + j];
+                for (var j = 0; j < 3*6; j++){
+                    tris[tris.length] = vertices[3*parseInt(vertexCoords[vertexOrder[Math.floor(j/3)]] - 1) + j%3];
                 }
                 
-                for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[2] - 1) + j];
-                }
-                
-                for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[3] - 1) + j];
-                }
-                
-                for (var j = 0; j < 3; j++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[0] - 1) + j];
+                // Get vertex normals for quads
+                if (vertexNormals.length > 0){
+                    // get the first 3
+                    for (var j = 0; j < 3*6; j++){
+                        normals[normals.length] = vertexNormals[3*parseInt(normalCoords[vertexOrder[Math.floor(j/3)]] - 1) + j];
+                    }
                 }
                 
                 
                 // Assuming the quad is specified in circumferential order
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[0]) - 1;
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[1]) - 1; 
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[2]) - 1;
-                
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[0]) - 1;
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[2]) - 1;
-                vertexIndices[vertexIndices.length] = parseInt(vertexCoords[3]) - 1;
-            
+                for (var j = 0; j < 6; j++){
+                    vertexIndices[vertexIndices.length] = parseInt(vertexCoords[vertexOrder[j]]);
+                }          
             }           
         }
     }
     
     errlog('vertices: ' + vertices);
-    initBuffers(vertices, vertexIndices, tris);
+    initBuffers(vertices, vertexIndices, tris, normals);
     //return [tris, quads, vertices, vertexIndices];
 }
 
@@ -344,9 +341,20 @@ function Object3d(options){ //later, normals, colors, uv, etc
         gl.bindBuffer(gl.ARRAY_BUFFER, this.triangleBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.tris), gl.STATIC_DRAW);
     }
+
+    this.normals = options.normalsArray || [];
+    this.normalsBuffer = gl.createBuffer();
+
+    if  (this.normals.length > 2){
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.normalsBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.normals), gl.STATIC_DRAW);
+    }
     
     this.triangleBuffer.numItems = this.tris.length/3;
     this.triangleBuffer.itemSize = 3;
+
+    this.normalsBuffer.numItems = this.normals.length/3;
+    this.normalsBuffer.itemSize = 3;
     
     this.x = options.x || 0;
     this.y = options.y || 0;
@@ -369,6 +377,10 @@ Object3d.prototype.draw = function(){
     if (this.tris.length > 2){
         gl.bindBuffer(gl.ARRAY_BUFFER, this.triangleBuffer);
         gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, this.triangleBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.normalsBuffer);
+        gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, this.normalsBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
         setMatrixUniforms();
         gl.drawArrays(gl.TRIANGLES, 0, this.triangleBuffer.numItems);
     }
@@ -394,7 +406,7 @@ var doneLoading = false;
 var modelData;
 var model;
 
-function initBuffers(vertices, vertexIndices, tris){
+function initBuffers(vertices, vertexIndices, tris, normals){
     doneLoading = false;
     
     if (vertices.length >= 3){
@@ -427,7 +439,7 @@ function initBuffers(vertices, vertexIndices, tris){
         
         doneLoading = true;
         
-        model = new Object3d({triArray: modelData, x: 1, y: 0});
+        model = new Object3d({triArray: modelData, normalsArray: normals, x: 1, y: 0});
         
         //renderLoop();
     }
