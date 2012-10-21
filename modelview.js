@@ -255,7 +255,7 @@ function loadObj(e){ "use strict";
             if (vertexCoords.length < 4){ // It's a triangle
                 // Load vertices
                 for (var k = 0; k < 9; k++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[Math.floor(j/3)] - 1) + k%3];
+                    tris[tris.length] = vertices[3*parseInt(vertexCoords[Math.floor(k/3)] - 1) + k%3];
                 }
 
                 if (vertexNormals.length > 0){
