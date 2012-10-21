@@ -18,10 +18,10 @@
 //
 // Future milestones:
 //
-// Version 0.01:
+// Version 0.01: - DONE
 // Goals: Load and display vertices of a local .obj file, no .mtl, no complicated lighting and no texturing as of yet
 //
-// Version 0.02:
+// Version 0.02: - PARTIAL
 // Goals: Simple lighting. Vertex colors. Vertex normals.
 //
 // Version 0.03:
@@ -34,11 +34,7 @@
 
 
 //Disable this and all calls to it in production
-function errlog(msg){
-    if (typeof console != 'undefined') {
-        console.log(msg);
-    }
-}
+
 
 //
 // Globals.
@@ -64,19 +60,19 @@ var pressedKeys = [];
 // Util functions
 //
 
-function radians(rotationDegrees){
+function radians(rotationDegrees){ "use strict";
     return rotationDegrees/180*Math.PI%(2*Math.PI);
 }
 
-function degrees(rotationRadians){
+function degrees(rotationRadians){ "use strict";
     return rotationRadians/Math.PI*180%(2*Math.PI);
 }   
 
-function handleKeyDown(event){
+function handleKeyDown(event){ "use strict";
     pressedKeys[event.keyCode] = true;
 }
 
-function handleKeyUp(event){
+function handleKeyUp(event){ "use strict";
     pressedKeys[event.keyCode] = false;
 }
 
@@ -85,7 +81,7 @@ function handleKeyUp(event){
 // Run this function first - it'll get us our gl object
 // 
 
-function initGL(canvas){
+function initGL(canvas){ "use strict";
     try {
         gl = canvas.getContext("experimental-webgl");
         gl.viewportWidth = canvas.width;
@@ -103,7 +99,7 @@ function initGL(canvas){
 // Utility functions
 //
 
-function requestAnimationFrame(drawScene){ // Argument is the function to draw      
+function requestAnimationFrame(drawScene){ "use strict"; // Argument is the function to draw      
     
         if (window.webkitRequestAnimationFrame){
             window.webkitRequestAnimationFrame(drawScene);
@@ -127,13 +123,13 @@ function requestAnimationFrame(drawScene){ // Argument is the function to draw
 //
 
 // Shaderses!!!! - Fix this to use the ajax text files vertex_shader.txt and fragment_shader.txt
-function getShader(gl, str, mime){
+function getShader(gl, str, mime){ "use strict";
     
     var shader;
-    if (mime == "x-shader/x-fragment") {
+    if (mime === "x-shader/x-fragment") {
         shader = gl.createShader(gl.FRAGMENT_SHADER);
         
-    } else if (mime == "x-shader/x-vertex") {
+    } else if (mime === "x-shader/x-vertex") {
         shader = gl.createShader(gl.VERTEX_SHADER);
         
     } else {
@@ -153,7 +149,7 @@ function getShader(gl, str, mime){
 
 
 // Fix this to use ajax as well
-function initShaders(vShaderText, fShaderText) {
+function initShaders(vShaderText, fShaderText) { "use strict";
     var fragmentShader = getShader(gl, fShaderText, "x-shader/x-fragment");
     var vertexShader = getShader(gl, vShaderText, "x-shader/x-vertex");
     
@@ -171,12 +167,13 @@ function initShaders(vShaderText, fShaderText) {
     // new field        
     shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
     shaderProgram.vertexNormalAttribute = gl.getAttribLocation(shaderProgram, "aVertexNormal");
-    //errlog("Got vertex position attribute " + shaderProgram.vertexPositionAttribute);
+    //console.log("Got vertex position attribute " + shaderProgram.vertexPositionAttribute);
     //shaderProgram.vertexTextureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
-    //errlog("Got tex coord attr: " + shaderProgram.vertexTextureCoordAttribute);
+    //console.log("Got tex coord attr: " + shaderProgram.vertexTextureCoordAttribute);
     
     // Provide values for attribute with an array
     gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+    gl.enableVertexAttribArray(shaderProgram.vertexNormalAttribute);
     //gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute)
     
     shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
@@ -186,7 +183,7 @@ function initShaders(vShaderText, fShaderText) {
        
 }
 
-function setMatrixUniforms() {
+function setMatrixUniforms() { "use strict";
     // Use the projection and model-view matrices in changing vertex position
     gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
     gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
@@ -201,21 +198,21 @@ function setMatrixUniforms() {
     gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
 }
 
-function mvPopMatrix(){
-    if (mvMatrixStack.length == 0) {
+function mvPopMatrix(){ "use strict";
+    if (mvMatrixStack.length === 0) { 
         throw "Invalid popMatrix!";
     }
     mvMatrix = mvMatrixStack.pop();
 }
 
-function mvPushMatrix(){
+function mvPushMatrix(){ "use strict";
     var copy = mat4.create();
     mat4.set(mvMatrix, copy);
     mvMatrixStack.push(copy);
 }
 
 
-function loadObj(e){
+function loadObj(e){ "use strict";
     var lines = e.target.result.split('\n');
     
     var vertices = [];
@@ -231,24 +228,24 @@ function loadObj(e){
         var params = lines[i].split(' ');
         
         // Dump all defined vertices into an array
-        if (params[0] == 'v'){
+        if (params[0] === 'v'){
             vertices[vertices.length] = parseFloat(params[1]);
             vertices[vertices.length] = parseFloat(params[2]);
             vertices[vertices.length] = parseFloat(params[3]);   
         }
         
-        if (params[0] == 'vn'){
-        	for (var j = 1; j < 4; j++){
-        		vertexNormals[vertexNormals.length] = parseFloat(params[j])
-        	}
+        if (params[0] === 'vn'){
+            for (var j = 1; j < 4; j++){
+                vertexNormals[vertexNormals.length] = parseFloat(params[j]);
+            }
         }
         
-        if (params[0] == 'f'){
+        if (params[0] === 'f'){
             var vertexCoords = [];
             var normalCoords = [];
 
-            for (var j = 1; j < params.length; j++){
-                var split = params[j].split("//");
+            for (var k = 1; k < params.length; k++){
+                var split = params[k].split("//");
                 vertexCoords[vertexCoords.length] = split[0];
                 if (split.length > 1){
                     normalCoords[normalCoords.length] = split[1];
@@ -257,20 +254,21 @@ function loadObj(e){
             //console.log(vertexCoords);
             if (vertexCoords.length < 4){ // It's a triangle
                 // Load vertices
-                for (var j = 0; j < 9; j++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[Math.floor(j/3)] - 1) + j];
+                for (var k = 0; k < 9; k++){
+                    tris[tris.length] = vertices[3*parseInt(vertexCoords[Math.floor(j/3)] - 1) + k%3];
                 }
 
                 if (vertexNormals.length > 0){
                     // Load vertex normals
-                    for (var j = 0; j < 9; j++){
-                        normals[normals.length] = vertexNormals[3*parseInt(normalCoords[Math.floor(j/3)] - 1) + j];
+                    for (var k = 0; k < 9; k++){
+                        var normalIndex = 3*parseInt(normalCoords[Math.floor(k/3)] - 1) + k%3;
+                        normals[normals.length] = vertexNormals[normalIndex];
                     }
                 }
                 
                 // Store the vertex indices, perhaps for later index-based rendering for quads
                 for (var j = 0; j < 3; j++){
-                    vertexIndices[vertexIndices.length] = parseInt(vertexCoords[j]);
+                    vertexIndices[vertexIndices.length] = parseInt(vertexCoords[j], 10);
                 }
                 
             }
@@ -278,17 +276,18 @@ function loadObj(e){
             else{ // It's a quad.
 
                 // Order of vertices in a quad converted to two tris
-                vertexOrder=[ 0, 1, 2, 2, 3, 0];
+                var vertexOrder=[ 0, 1, 2, 2, 3, 0];
             
                 for (var j = 0; j < 3*6; j++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[vertexOrder[Math.floor(j/3)]] - 1) + j%3];
+                    tris[tris.length] = vertices[ 3*(parseInt(vertexCoords[vertexOrder[Math.floor(j/3)]], 10) - 1) + j%3]; // 3*parseInt(vertexCoords[vertexOrder[Math.floor(j/3)]] - 1, 10) + j%3
                 }
                 
                 // Get vertex normals for quads
                 if (vertexNormals.length > 0){
                     // get the first 3
-                    for (var j = 0; j < 3*6; j++){
-                        normals[normals.length] = vertexNormals[3*parseInt(normalCoords[vertexOrder[Math.floor(j/3)]] - 1) + j];
+                    for (var j = 0; j < 18; j++){
+                        var normalIndex = 3*(parseInt(normalCoords[vertexOrder[Math.floor(j/3)]], 10) - 1) + j%3;
+                        normals[normals.length] = vertexNormals[normalIndex];
                     }
                 }
                 
@@ -301,20 +300,20 @@ function loadObj(e){
         }
     }
     
-    errlog('vertices: ' + vertices);
+    console.log('vertices: ' + vertices);
     initBuffers(vertices, vertexIndices, tris, normals);
     //return [tris, quads, vertices, vertexIndices];
 }
 
 
 // Read a file in the Wavefront OBJ format
-function readObj(file){
+function readObj(file){ "use strict";
     
     var reader = new FileReader();
     reader.onload = loadObj;
     reader.readAsText(file);
     
-    errlog(reader);
+    console.log(reader);
     
     
 }
@@ -329,9 +328,9 @@ function readObj(file){
 
 
 
-function Object3d(options){ //later, normals, colors, uv, etc
+function Object3d(options){ "use strict"; //later, normals, colors, uv, etc
     //TODO: Change args to object 
-    if (options == undefined){
+    if (options === undefined){
         options = {};
     }
     this.tris = options.triArray || [];
@@ -366,7 +365,7 @@ function Object3d(options){ //later, normals, colors, uv, etc
 
 }
 
-Object3d.prototype.draw = function(){
+Object3d.prototype.draw = function(){ "use strict";
     mvPushMatrix();
     
     mat4.translate(mvMatrix, [this.x, this.y, this.z]);
@@ -378,9 +377,10 @@ Object3d.prototype.draw = function(){
         gl.bindBuffer(gl.ARRAY_BUFFER, this.triangleBuffer);
         gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, this.triangleBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.normalsBuffer);
-        gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, this.normalsBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
+        if (this.normals.length > 2){
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.normalsBuffer);
+            gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, this.normalsBuffer.itemSize, gl.FLOAT, false, 0, 0);
+        }
         setMatrixUniforms();
         gl.drawArrays(gl.TRIANGLES, 0, this.triangleBuffer.numItems);
     }
@@ -388,7 +388,7 @@ Object3d.prototype.draw = function(){
     mvPopMatrix();
 
     // Set update time
-}
+};
 
 
 
@@ -406,7 +406,7 @@ var doneLoading = false;
 var modelData;
 var model;
 
-function initBuffers(vertices, vertexIndices, tris, normals){
+function initBuffers(vertices, vertexIndices, tris, normals){ "use strict";
     doneLoading = false;
     
     if (vertices.length >= 3){
@@ -418,8 +418,8 @@ function initBuffers(vertices, vertexIndices, tris, normals){
         gl.bindBuffer(gl.ARRAY_BUFFER, triBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
         
-        errlog(vertices);
-        errlog(vertexIndices);
+        console.log(vertices);
+        console.log(vertexIndices);
         
         triBuffer.numItems = vertices.length/3;
         triBuffer.itemSize = 3;
@@ -453,7 +453,7 @@ function initBuffers(vertices, vertexIndices, tris, normals){
 //
 var lastTime;
 var timeNow;
-function renderLoop(){
+function renderLoop(){ "use strict";
     
     // Set the viewport
     gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
@@ -475,12 +475,12 @@ function renderLoop(){
     mat4.identity(mvMatrix);
     mat4.translate(mvMatrix, [0, 0.0, -8.0]);
     
-    //errlog("Found data");   
+    //console.log("Found data");   
 
     timeNow = new Date().getTime();
      
     if (doneLoading){
-        elapsedTime = timeNow - lastTime;
+        var elapsedTime = timeNow - lastTime;
         if (pressedKeys[38]){ // Up
             model.xRot += Math.PI/3*elapsedTime/1000.0;
         }
@@ -496,35 +496,6 @@ function renderLoop(){
         model.draw();
         //console.log(model.xRot);
         
-        if (triBuffer != null){
-            /*
-            //mat4.translate(mvMatrix, [3.0, 0, 0]);
-            gl.bindBuffer(gl.ARRAY_BUFFER, inOrderTriBuffer);
-            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, inOrderTriBuffer.itemSize, gl.FLOAT, false, 0, 0);
-            setMatrixUniforms();
-            gl.drawArrays(gl.TRIANGLES, 0, inOrderTriBuffer.numItems);
-        
-        
-            errlog("Got tris");
-            gl.bindBuffer(gl.ARRAY_BUFFER, triBuffer);
-            
-            // Use this for vertex positions
-            gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, triBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-            errlog("Vertex position attribute: " + shaderProgram.vertexPositionAttribute + " tribuffer itemsize: " + triBuffer.itemSize);
-            errlog(triBuffer);
-            
-            // Index into the array data
-            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-            
-            // Take account of current model-view matrix and projection matrix
-            setMatrixUniforms();
-        
-            // as opposed to gl.drawArrays
-            //gl.drawElements(gl.TRIANGLES, 0, indexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-            */
-            
-        }
      }
      
      requestAnimationFrame(renderLoop);

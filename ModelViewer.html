@@ -36,7 +36,7 @@
 				vec3 lightColor = vec3(1.0, 1.0, 1.0);
 				vec3 ambient = vec3(0.3, 0.3, 0.3);
 				vec3 transformedNormal = uNMatrix * normalize(aVertexNormal);
-				float directionLightWeighting = max(dot(transformedNormal, lightDirecVector), 0.0); // 
+				float directionLightWeighting = max(dot(transformedNormal , lightDirecVector), 0.0); // d
 				vLightWeighting = ambient + lightColor * directionLightWeighting;
 
 				gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
