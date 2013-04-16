@@ -1,13 +1,9 @@
-precision mediump float;
-    
-//varying vec2 vTextureCoord;
 
-//uniform sampler2D uSampler;
+precision mediump float;
+
+varying vec3 vLightWeighting;
 
 void main(void) {
-	// Set all polygon colors to white for now. Later we'll add vertex color and
-	// texture support through .mtl files
-	gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-	//texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
-  
+vec3 color = vec3(1.0, 0.0, 1.0);
+gl_FragColor = vec4( color * vLightWeighting, 1.0);
 }

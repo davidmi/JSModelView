@@ -23,6 +23,7 @@
 //
 // Version 0.02: - PARTIAL
 // Goals: Simple lighting. Vertex colors. Vertex normals.
+// TODO: Vertex colors
 //
 // Version 0.03:
 // Goals: Handle fullscreen/screen resize? Textures.
@@ -101,6 +102,11 @@ function initGL(canvas){ "use strict";
 
 function requestAnimationFrame(drawScene){ "use strict"; // Argument is the function to draw      
     
+        //if (window.requestAnimationFrame){
+        //    window.requestAnimationFrame(drawScene);
+        //    return;
+        //}
+
         if (window.webkitRequestAnimationFrame){
             window.webkitRequestAnimationFrame(drawScene);
             return;
@@ -111,10 +117,6 @@ function requestAnimationFrame(drawScene){ "use strict"; // Argument is the func
             return;
         }
         
-        if (window.requestAnimationFrame){
-            window.requestAnimationFrame(drawScene);
-            return;
-        }
 }
 
 
@@ -140,6 +142,7 @@ function getShader(gl, str, mime){ "use strict";
     gl.compileShader(shader);
     
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+
         alert(gl.getShaderInfoLog(shader));
         return null;
     }
