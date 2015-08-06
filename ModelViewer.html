@@ -16,32 +16,45 @@
 			precision mediump float;
 
 			varying vec3 vLightWeighting;
+      varying float vAlpha;
+      varying vec2 vTexCoord;
+
+      uniform sampler2D uSampler;
 
 			void main(void) {
-				vec3 color = vec3(1.0, 0.0, 1.0);
-				gl_FragColor = vec4( color * vLightWeighting, 1.0);
+				// vec3 color = vec3(1.0, 0.0, 1.0);
+				// gl_FragColor = vec4( color * vLightWeighting, vAlpha);
+        vec4 color = texture2D(uSampler, vec2(vTexCoord.s, vTexCoord.t));
+        gl_FragColor = vec4(color.rgb, color.a * vAlpha);
 			}
 		</script>
 		<script id="vertex-shader" type="x-shader/x-vertex">
+      attribute vec2 aTexCoord;
 			attribute vec3 aVertexPosition;
 			attribute vec3 aVertexNormal;
 
 			uniform mat4 uMVMatrix;
 			uniform mat4 uPMatrix;
 			uniform mat3 uNMatrix;
+      uniform float uAlpha;
+      uniform float uScale;
 
 			varying vec3 vLightWeighting;
+      varying float vAlpha;
+      varying vec2 vTexCoord;
 
 			void main(void) {
 				vec3 lightDirecVector = vec3(1.0, 0, 0);
 				vec3 lightColor = vec3(1.0, 1.0, 1.0);
-				vec3 ambient = vec3(0.3, 0.3, 0.3);
+				vec3 ambient = vec3(1.0, 1.0, .3);
 				vec3 transformedNormal = uNMatrix * normalize(aVertexNormal);
 				float directionLightWeighting = max(dot(transformedNormal , lightDirecVector), 0.0); // d
 				vLightWeighting = ambient + lightColor * directionLightWeighting;
+        vAlpha = uAlpha;
+        vTexCoord = aTexCoord;
 
 			// Incorporate the Perspective and Model-View matrix
-				gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+				gl_Position = uPMatrix * uMVMatrix * vec4(uScale * aVertexPosition, 1.0);
 			}
 		</script>
 
@@ -55,12 +68,88 @@
 					
                 }
             }
+
+            function createSprite(height, width, depth, texture){
+                vertices = [
+                     width,  height,  depth,
+                    -width,  height,  depth,
+                     width, -height,  depth,
+                    -width,  height,  depth,
+                    -width, -height,  depth,
+                     width, -height,  depth
+                ];
+
+                normals = [
+                     0.0, 0.0, -1.0,
+                     0.0, 0.0, -1.0,
+                     0.0, 0.0, -1.0,
+                     0.0, 0.0, -1.0,
+                     0.0, 0.0, -1.0,
+                     0.0, 0.0, -1.0
+                ];
+
+                texcoords = [
+                    1.0,  1.0,
+                    0.0,  1.0,
+                    1.0,  0.0,
+                    0.0,  1.0,
+                    0.0,  0.0,
+                    1.0,  0.0
+                ];
+
+                //window.videoTexture = initTexture(texture)
+                var tex = initTexture(texture);
+                var model = new Object3d({triArray: vertices, normalsArray: normals, x: 0, y: 0, texCoords: texcoords, texImage: tex});
+
+                return model;
+            }
+
+            function createVideoSprite(height, width, depth, texture){
+                vertices = [
+                     width,  height,  depth,
+                    -width,  height,  depth,
+                     width, -height,  depth,
+                    -width,  height,  depth,
+                    -width, -height,  depth,
+                     width, -height,  depth
+                ];
+
+                normals = [
+                     0.0, 0.0, -1.0,
+                     0.0, 0.0, -1.0,
+                     0.0, 0.0, -1.0,
+                     0.0, 0.0, -1.0,
+                     0.0, 0.0, -1.0,
+                     0.0, 0.0, -1.0
+                ];
+
+                texcoords = [
+                    1.0,  1.0,
+                    0.0,  1.0,
+                    1.0,  0.0,
+                    0.0,  1.0,
+                    0.0,  0.0,
+                    1.0,  0.0
+                ];
+
+                //window.videoTexture = initTexture(texture)
+                var tex = initVideoTexture(texture);
+                var model = new Object3d({triArray: vertices, normalsArray: normals, x: 0, y: 0, texCoords: texcoords, texImage: tex});
+
+                return model;
+            }
             
             function loadModel(){
                 errlog(typeof document.getElementById("loadFile"));
                 errlog(typeof document.getElementById("loadFile"));
-                readObj(document.getElementById("loadFile").files[0]);
-                //initBuffers(arr[2], arr[3]);			
+                //readObj(document.getElementById("loadFile").files[0]);
+                //initBuffers(arr[2], arr[3]);		
+
+                models.push(createSprite(0.4, 0.4, 0.5, "tex.png"));
+                models.push(createVideoSprite(1.0, 1.0, 0.4, "test.webm"));
+
+
+                doneLoading = true;
             }
 			
 			function parseHtmlToString(id){
@@ -93,37 +182,45 @@
                     return;
                 }
 				
-				// Start GL
-				initGL($("#game-view")[0]);				
-				
-				// Try to load shaders, check if we're getting the shader text correctly
-				initShaders(vertexShader, fragmentShader);
-				
-			    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-                gl.enable(gl.DEPTH_TEST);
+                // Start GL
+                initGL($("#game-view")[0]);				
+
+                // Try to load shaders, check if we're getting the shader text correctly
+                initShaders(vertexShader, fragmentShader);
+
+                gl.clearColor(0.0, 0.0, 0.0, 1.0);
+                //gl.enable(gl.DEPTH_TEST);
                 
-                renderLoop();
+                renderLoop(renderCallback);
 
                 document.onkeydown = handleKeyDown;
                 document.onkeyup = handleKeyUp;		
             }
 
+            function startVideo() {
+                console.log('playing video!');
+                videoElement.play();
+            }
+
+            function videoDone() {
+
+            }   
 		        
             $(document).ready(function (){
                 errlog("This is a test");   
 
                 //$.get("fragment_shader.txt", undefined, function(data){
-					// Was loading this from another file, but this is inconvenient for
-					// running the app locally. Inlined shaders for now
-                    //fragmentShader = data; 
-					fragmentShader = $('#fragment-shader').text();
+                // Was loading this from another file, but this is inconvenient for
+                // running the app locally. Inlined shaders for now
+                //fragmentShader = data; 
+			    fragmentShader = $('#fragment-shader').text();
 					
-                    callback();
+                callback();
                 //});
                 //$.get("vertex_shader.txt", undefined, function(data){
                     //vertexShader = data; 
-					vertexShader = $('#vertex-shader').text();
-                    callback();
+                vertexShader = $('#vertex-shader').text();
+                callback();
                 //});
             });
             
@@ -142,13 +239,13 @@
     </head>
 
     <body>
+
         <canvas id="game-view" width="800px" height="600px">
             <p>Your browser does not support the canvas element. Please upgrade to Mozilla Firefox</p>
-        </canvas>
-        
+        </canvas> 
+
         <input id="loadFile" type="file"></input>
-        <a href="javascript:loadModel()">Load the OBJ model</a>
-        
+        <a href="javascript:loadModel()">Load the OBJ model</a>    
     </body>
     
 </html>

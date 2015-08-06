@@ -53,6 +53,7 @@ var mvMatrixStack = [];
 
 // Projection matrix
 var pMatrix = mat4.create();
+var orthoMatrix = mat4.create();
 
 // Key states
 var pressedKeys = [];
@@ -61,19 +62,23 @@ var pressedKeys = [];
 // Util functions
 //
 
-function radians(rotationDegrees){ "use strict";
-    return rotationDegrees/180*Math.PI%(2*Math.PI);
+function radians(rotationDegrees) {
+    "use strict";
+    return rotationDegrees / 180 * Math.PI % (2 * Math.PI);
 }
 
-function degrees(rotationRadians){ "use strict";
-    return rotationRadians/Math.PI*180%(2*Math.PI);
-}   
+function degrees(rotationRadians) {
+    "use strict";
+    return rotationRadians / Math.PI * 180 % (2 * Math.PI);
+}
 
-function handleKeyDown(event){ "use strict";
+function handleKeyDown(event) {
+    "use strict";
     pressedKeys[event.keyCode] = true;
 }
 
-function handleKeyUp(event){ "use strict";
+function handleKeyUp(event) {
+    "use strict";
     pressedKeys[event.keyCode] = false;
 }
 
@@ -82,16 +87,37 @@ function handleKeyUp(event){ "use strict";
 // Run this function first - it'll get us our gl object
 // 
 
-function initGL(canvas){ "use strict";
+function resizeCanvas(){
+    "use strict";
+
+    // Get the canvas element form the page
+    var canvas = document.getElementById("game-view");
+     
+    /* Rresize the canvas to occupy the full page, 
+       by getting the widow width and height and setting it to canvas*/
+     
+
+    canvas.height = window.innerHeight;
+    canvas.width  = window.innerWidth;
+    gl.viewportWidth = canvas.width;
+    gl.viewportHeight = canvas.height;
+}
+
+function initGL(canvas) {
+    "use strict";
     try {
-        gl = canvas.getContext("experimental-webgl");
+        gl = canvas.getContext("webgl", {antialias: true});
         gl.viewportWidth = canvas.width;
         gl.viewportHeight = canvas.height;
-        
+
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.enable(gl.BLEND);
+        gl.disable(gl.DEPTH_TEST);
+
     } catch (e) {
         // Put webgl fail stuff here?
     }
-    if (!gl){
+    if (!gl) {
         alert("Could not initialize WebGL, sorry :( ");
     }
 }
@@ -100,23 +126,24 @@ function initGL(canvas){ "use strict";
 // Utility functions
 //
 
-function requestAnimationFrame(drawScene){ "use strict"; // Argument is the function to draw      
-    
-        //if (window.requestAnimationFrame){
-        //    window.requestAnimationFrame(drawScene);
-        //    return;
-        //}
+function requestAnimationFrame(drawScene) {
+    "use strict"; // Argument is the function to draw      
 
-        if (window.webkitRequestAnimationFrame){
-            window.webkitRequestAnimationFrame(drawScene);
-            return;
-        }
-            
-        if (window.mozRequestAnimationFrame){
-            window.mozRequestAnimationFrame(drawScene);
-            return;
-        }
-        
+    //if (window.requestAnimationFrame){
+    //    window.requestAnimationFrame(drawScene);
+    //    return;
+    //}
+
+    if (window.webkitRequestAnimationFrame) {
+        window.webkitRequestAnimationFrame(drawScene);
+        return;
+    }
+
+    if (window.mozRequestAnimationFrame) {
+        window.mozRequestAnimationFrame(drawScene);
+        return;
+    }
+
 }
 
 
@@ -125,68 +152,148 @@ function requestAnimationFrame(drawScene){ "use strict"; // Argument is the func
 //
 
 // Shaderses!!!! - Fix this to use the ajax text files vertex_shader.txt and fragment_shader.txt
-function getShader(gl, str, mime){ "use strict";
-    
+function getShader(gl, str, mime) {
+    "use strict";
+
     var shader;
     if (mime === "x-shader/x-fragment") {
         shader = gl.createShader(gl.FRAGMENT_SHADER);
-        
+
     } else if (mime === "x-shader/x-vertex") {
         shader = gl.createShader(gl.VERTEX_SHADER);
-        
+
     } else {
         return null;
     }
-    
+
     gl.shaderSource(shader, str);
     gl.compileShader(shader);
-    
+
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
 
         alert(gl.getShaderInfoLog(shader));
         return null;
     }
-    
+
     return shader;
+}
+
+function handleLoadedVideoTexture(texture) {
+    "use strict";
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+function handleLoadedTexture(texture) {
+    "use strict";
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+function initTexture(imageUrl) {
+    "use strict";
+    var texture = gl.createTexture();
+    texture.image = new Image();
+    texture.image.onload = function() {
+        handleLoadedTexture(texture);
+    };
+
+    texture.image.src = imageUrl;
+    return texture;
+}
+
+function initPreloadedTexture(image){
+    "use strict";
+    var texture = gl.createTexture();
+    texture.image = image;
+    handleLoadedTexture(texture);
+
+    return texture;
+}
+
+function initVideoTexture(videoUrl) {
+    "use strict";
+    var texture = gl.createTexture();
+    texture.video = document.createElement('video');
+    texture.video.autoPlay = true;
+
+    handleLoadedVideoTexture(texture);
+
+    texture.video.preload = "auto";
+    texture.video.src = videoUrl;
+
+    return texture;
+}
+
+function updateTexture(texture) {
+    "use strict";
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA,
+        gl.UNSIGNED_BYTE, texture.video);
+}
+
+function updateTextureCanvas(texture){
+    "use strict";
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA,
+        gl.UNSIGNED_BYTE, texture.image);
 }
 
 
 // Fix this to use ajax as well
-function initShaders(vShaderText, fShaderText) { "use strict";
+function initShaders(vShaderText, fShaderText) {
+    "use strict";
     var fragmentShader = getShader(gl, fShaderText, "x-shader/x-fragment");
     var vertexShader = getShader(gl, vShaderText, "x-shader/x-vertex");
-    
+
     shaderProgram = gl.createProgram();
     gl.attachShader(shaderProgram, vertexShader);
     gl.attachShader(shaderProgram, fragmentShader);
     gl.linkProgram(shaderProgram);
-    
-    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)){
+
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
         alert("could not initialize shaders");
     }
-    
+
     gl.useProgram(shaderProgram);
-    
+
     // new field        
     shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+    gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
     shaderProgram.vertexNormalAttribute = gl.getAttribLocation(shaderProgram, "aVertexNormal");
+    shaderProgram.texCoordsAttribute = gl.getAttribLocation(shaderProgram, "aTexCoord");
+    gl.enableVertexAttribArray(shaderProgram.vertexNormalAttribute);
+    gl.enableVertexAttribArray(shaderProgram.texCoordsAttribute);
+
     //console.log("Got vertex position attribute " + shaderProgram.vertexPositionAttribute);
     //shaderProgram.vertexTextureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
     //console.log("Got tex coord attr: " + shaderProgram.vertexTextureCoordAttribute);
-    
+
     // Provide values for attribute with an array
     gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
     gl.enableVertexAttribArray(shaderProgram.vertexNormalAttribute);
     //gl.enableVertexAttribArray(shaderProgram.vertexColorAttribute)
-    
+
     shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
     shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
     shaderProgram.nMatrixUniform = gl.getUniformLocation(shaderProgram, "uNMatrix");
-    //shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
-       
+    shaderProgram.alphaUniform = gl.getUniformLocation(shaderProgram, "uAlpha");
+    shaderProgram.scaleUniform = gl.getUniformLocation(shaderProgram, "uScale");
+    shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
 }
 
-function setMatrixUniforms() { "use strict";
+function setMatrixUniforms() {
+    "use strict";
     // Use the projection and model-view matrices in changing vertex position
     gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
     gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix);
@@ -201,108 +308,109 @@ function setMatrixUniforms() { "use strict";
     gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
 }
 
-function mvPopMatrix(){ "use strict";
-    if (mvMatrixStack.length === 0) { 
+function mvPopMatrix() {
+    "use strict";
+    if (mvMatrixStack.length === 0) {
         throw "Invalid popMatrix!";
     }
     mvMatrix = mvMatrixStack.pop();
 }
 
-function mvPushMatrix(){ "use strict";
+function mvPushMatrix() {
+    "use strict";
     var copy = mat4.create();
     mat4.set(mvMatrix, copy);
     mvMatrixStack.push(copy);
 }
 
 
-function loadObj(e){ "use strict";
+function loadObj(e) {
+    "use strict";
     var lines = e.target.result.split('\n');
-    
+
     var vertices = [];
     var vertexNormals = [];
     var tris = [];
     var normals = [];
     var quads = [];
-    
+
     var vertexIndices = [];
-    
-    for (var i = 0; i < lines.length; i++){
-    
+
+    for (var i = 0; i < lines.length; i++) {
+
         var params = lines[i].split(' ');
-        
+
         // Dump all defined vertices into an array
-        if (params[0] === 'v'){
+        if (params[0] === 'v') {
             vertices[vertices.length] = parseFloat(params[1]);
             vertices[vertices.length] = parseFloat(params[2]);
-            vertices[vertices.length] = parseFloat(params[3]);   
+            vertices[vertices.length] = parseFloat(params[3]);
         }
-        
-        if (params[0] === 'vn'){
-            for (var j = 1; j < 4; j++){
+
+        if (params[0] === 'vn') {
+            for (var j = 1; j < 4; j++) {
                 vertexNormals[vertexNormals.length] = parseFloat(params[j]);
             }
         }
-        
-        if (params[0] === 'f'){
+
+        if (params[0] === 'f') {
             var vertexCoords = [];
             var normalCoords = [];
 
-            for (var k = 1; k < params.length; k++){
+            for (var k = 1; k < params.length; k++) {
                 var split = params[k].split("//");
                 vertexCoords[vertexCoords.length] = split[0];
-                if (split.length > 1){
+                if (split.length > 1) {
                     normalCoords[normalCoords.length] = split[1];
                 }
             }
             //console.log(vertexCoords);
-            if (vertexCoords.length < 4){ // It's a triangle
+            if (vertexCoords.length < 4) { // It's a triangle
                 // Load vertices
-                for (var k = 0; k < 9; k++){
-                    tris[tris.length] = vertices[3*parseInt(vertexCoords[Math.floor(k/3)] - 1) + k%3];
+                for (var k = 0; k < 9; k++) {
+                    tris[tris.length] = vertices[3 * parseInt(vertexCoords[Math.floor(k / 3)] - 1) + k % 3];
                 }
 
-                if (vertexNormals.length > 0){
+                if (vertexNormals.length > 0) {
                     // Load vertex normals
-                    for (var k = 0; k < 9; k++){
-                        var normalIndex = 3*parseInt(normalCoords[Math.floor(k/3)] - 1) + k%3;
+                    for (var k = 0; k < 9; k++) {
+                        var normalIndex = 3 * parseInt(normalCoords[Math.floor(k / 3)] - 1) + k % 3;
                         normals[normals.length] = vertexNormals[normalIndex];
                     }
                 }
-                
+
                 // Store the vertex indices, perhaps for later index-based rendering for quads
-                for (var j = 0; j < 3; j++){
+                for (var j = 0; j < 3; j++) {
                     vertexIndices[vertexIndices.length] = parseInt(vertexCoords[j], 10);
                 }
-                
-            }
-            
-            else{ // It's a quad.
+
+            } else { // It's a quad.
 
                 // Order of vertices in a quad converted to two tris
-                var vertexOrder=[ 0, 1, 2, 2, 3, 0];
-            
-                for (var j = 0; j < 3*6; j++){
-                    tris[tris.length] = vertices[ 3*(parseInt(vertexCoords[vertexOrder[Math.floor(j/3)]], 10) - 1) + j%3]; // 3*parseInt(vertexCoords[vertexOrder[Math.floor(j/3)]] - 1, 10) + j%3
+                var vertexOrder = [0, 1, 2, 2, 3, 0];
+
+                for (var j = 0; j < 3 * 6; j++) {
+                    tris[tris.length] = vertices[3 * (parseInt(vertexCoords[vertexOrder[Math.floor(j / 3)]], 10) - 1) + j % 3]; // 3*parseInt(vertexCoords[vertexOrder[Math.floor(j/3)]] - 1, 10) + j%3
                 }
-                
+
                 // Get vertex normals for quads
-                if (vertexNormals.length > 0){
+                if (vertexNormals.length > 0) {
                     // get the first 3
-                    for (var j = 0; j < 18; j++){
-                        var normalIndex = 3*(parseInt(normalCoords[vertexOrder[Math.floor(j/3)]], 10) - 1) + j%3;
+                    for (var j = 0; j < 18; j++) {
+                        var normalIndex = 3 * (parseInt(normalCoords[vertexOrder[Math.floor(j / 3)]], 10) - 1) + j % 3;
                         normals[normals.length] = vertexNormals[normalIndex];
                     }
                 }
-                
-                
+
+
                 // Assuming the quad is specified in circumferential order
-                for (var j = 0; j < 6; j++){
+                for (var j = 0; j < 6; j++) {
                     vertexIndices[vertexIndices.length] = parseInt(vertexCoords[vertexOrder[j]]);
-                }          
-            }           
+                }
+            }
         }
     }
-    
+
     console.log('vertices: ' + vertices);
     initBuffers(vertices, vertexIndices, tris, normals);
     //return [tris, quads, vertices, vertexIndices];
@@ -310,15 +418,12 @@ function loadObj(e){ "use strict";
 
 
 // Read a file in the Wavefront OBJ format
-function readObj(file){ "use strict";
-    
+function readObj(file) {
+    "use strict";
+
     var reader = new FileReader();
     reader.onload = loadObj;
     reader.readAsText(file);
-    
-    console.log(reader);
-    
-    
 }
 
 
@@ -331,15 +436,16 @@ function readObj(file){ "use strict";
 
 
 
-function Object3d(options){ "use strict"; //later, normals, colors, uv, etc
+function Object3d(options) {
+    "use strict"; //later, normals, colors, uv, etc
     //TODO: Change args to object 
-    if (options === undefined){
+    if (options === undefined) {
         options = {};
     }
     this.tris = options.triArray || [];
-    this.triangleBuffer = gl.createBuffer();  
+    this.triangleBuffer = gl.createBuffer();
 
-    if (this.tris.length > 2) {
+    if (this.tris.length > 9) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.triangleBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.tris), gl.STATIC_DRAW);
     }
@@ -347,53 +453,84 @@ function Object3d(options){ "use strict"; //later, normals, colors, uv, etc
     this.normals = options.normalsArray || [];
     this.normalsBuffer = gl.createBuffer();
 
-    if  (this.normals.length > 2){
+    this.alpha = options.alpha || 1.0;
+
+    this.texImage = options.texImage || gl.createTexture();
+
+    if (this.normals.length > 9) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.normalsBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.normals), gl.STATIC_DRAW);
     }
-    
-    this.triangleBuffer.numItems = this.tris.length/3;
+
+    this.texCoords = options.texCoords || [];
+    this.texCoordsBuffer = gl.createBuffer();
+
+    if (this.texCoords.length > 6) {
+        this.hasTex = true;
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordsBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.texCoords), gl.STATIC_DRAW);
+        this.texCoordsBuffer.numItems = this.texCoords.length / 2;
+        this.texCoordsBuffer.itemSize = 2;
+    }
+
+    this.triangleBuffer.numItems = this.tris.length / 3;
     this.triangleBuffer.itemSize = 3;
 
-    this.normalsBuffer.numItems = this.normals.length/3;
+    this.normalsBuffer.numItems = this.normals.length / 3;
     this.normalsBuffer.itemSize = 3;
-    
+
+
     this.x = options.x || 0;
     this.y = options.y || 0;
     this.z = options.z || 0;
-    
-    this.xRot = (options.xRot || 0)/180*Math.PI%(2*Math.PI);
-    this.yRot = (options.yRot || 0)/180*Math.PI%(2*Math.PI);
-    this.zRot = (options.zRot || 0)/180*Math.PI%(2*Math.PI);
+
+    this.scale = options.scale || 1;
+
+    this.xRot = (options.xRot || 0) / 180 * Math.PI % (2 * Math.PI);
+    this.yRot = (options.yRot || 0) / 180 * Math.PI % (2 * Math.PI);
+    this.zRot = (options.zRot || 0) / 180 * Math.PI % (2 * Math.PI);
 
 }
 
-Object3d.prototype.draw = function(){ "use strict";
+Object3d.prototype.draw = function() {
+    "use strict";
     mvPushMatrix();
-    
+
     mat4.translate(mvMatrix, [this.x, this.y, this.z]);
     mat4.rotateX(mvMatrix, this.xRot);
     mat4.rotateY(mvMatrix, this.yRot);
     mat4.rotateZ(mvMatrix, this.zRot);
-    
-    if (this.tris.length > 2){
+
+    if (this.tris.length > 9) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.triangleBuffer);
         gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, this.triangleBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
-        if (this.normals.length > 2){
+        if (this.normals.length > 9) {
             gl.bindBuffer(gl.ARRAY_BUFFER, this.normalsBuffer);
             gl.vertexAttribPointer(shaderProgram.vertexNormalAttribute, this.normalsBuffer.itemSize, gl.FLOAT, false, 0, 0);
         }
+
+        if (this.texCoords.length > 6) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordsBuffer);
+            gl.vertexAttribPointer(shaderProgram.texCoordsAttribute, this.texCoordsBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, this.texImage);
+            gl.uniform1i(shaderProgram.samplerUniform, 0);
+        }
+
         setMatrixUniforms();
+
+        gl.uniform1f(shaderProgram.alphaUniform, this.alpha);
+        gl.uniform1f(shaderProgram.scaleUniform, this.scale);
+
         gl.drawArrays(gl.TRIANGLES, 0, this.triangleBuffer.numItems);
     }
-    
+
     mvPopMatrix();
 
     // Set update time
 };
-
-
 
 
 
@@ -408,102 +545,115 @@ var doneLoading = false;
 
 var modelData;
 var model;
+var models = [];
 
-function initBuffers(vertices, vertexIndices, tris, normals){ "use strict";
+function initBuffers(vertices, vertexIndices, tris, normals) {
+    "use strict";
     doneLoading = false;
-    
-    if (vertices.length >= 3){
-    
+
+    if (vertices.length >= 3) {
+
         modelData = tris;
-    
+
         triBuffer = gl.createBuffer();
-        
+
         gl.bindBuffer(gl.ARRAY_BUFFER, triBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-        
+
         console.log(vertices);
         console.log(vertexIndices);
-        
-        triBuffer.numItems = vertices.length/3;
+
+        triBuffer.numItems = vertices.length / 3;
         triBuffer.itemSize = 3;
-        
+
         indexBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(vertexIndices), gl.STATIC_DRAW);
         indexBuffer.itemSize = 1;
         indexBuffer.numItems = vertexIndices.length;
-        
+
         inOrderTriBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, inOrderTriBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(tris), gl.STATIC_DRAW);
-        
+
         inOrderTriBuffer.itemSize = 3;
-        inOrderTriBuffer.numItems = tris.length/3;
-        
+        inOrderTriBuffer.numItems = tris.length / 3;
+
         doneLoading = true;
-        
-        model = new Object3d({triArray: modelData, normalsArray: normals, x: 1, y: 0});
-        
+
+        model = new Object3d({
+            triArray: modelData,
+            normalsArray: normals,
+            x: 1,
+            y: 0
+        });
+
         //renderLoop();
     }
-     
+
 }
-
-
 
 //
 // The main loop, running in it's own (pseudo?)thread
 //
 var lastTime;
 var timeNow;
-function renderLoop(){ "use strict";
-    
-    // Set the viewport
-    gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
-    
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);    
-    // Clear the canvas
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-     
-    // Set up the view frustum
-    // args:
-    // 45 degrees vertical FOV
-    // Width/Height ratio
-    // Near clipping 0.1 gl units
-    // Far clipping 100 gl units
-    // Projection matrix
-    mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
-    
-    // Set movement matrix to identity
-    mat4.identity(mvMatrix);
-    mat4.translate(mvMatrix, [0, 0.0, -8.0]);
-    
-    //console.log("Found data");   
 
-    timeNow = new Date().getTime();
-     
-    if (doneLoading){
-        var elapsedTime = timeNow - lastTime;
-        if (pressedKeys[38]){ // Up
-            model.xRot += Math.PI/3*elapsedTime/1000.0;
+var Animation = {
+    callback: function () {}, // User sets this
+
+    renderLoop: function() {
+        "use strict";
+        if (doneLoading) { // Mechanism to reset callbacks
+
+            // Set the viewport
+            gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            // Clear the canvas
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+
+
+            // Set up the view frustum
+            // args:
+            // 45 degrees vertical FOV
+            // Width/Height ratio
+            // Near clipping 0.1 gl units
+            // Far clipping 100 gl units
+            // Projection matrix
+            //mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+            mat4.ortho(-1, 1, -1, 1, 0.1, 100, pMatrix);
+            mat4.ortho(-1, 1, -1, 1, 0.1, 100, orthoMatrix);
+
+            // Set movement matrix to identity
+            mat4.identity(mvMatrix);
+            mat4.translate(mvMatrix, [0, 0.0, -8.0]);
+
+            //console.log("Found data");   
+
+            timeNow = new Date().getTime();
+
+            var elapsedTime = timeNow - lastTime;
+
+            //updateTexture(window.videoTexture);
+
+
+            Animation.callback(elapsedTime, timeNow);
+            for (var i = 0; i < models.length; i++) {
+                if (models[i].texImage.video) {
+                    updateTexture(models[i].texImage);
+                }
+                models[i].draw();
+            }
+            //console.log(model.xRot);
+
+
+            requestAnimationFrame(Animation.renderLoop);
+            lastTime = timeNow;    
         }
-        if (pressedKeys[40]){ // Down
-            model.xRot += -Math.PI/3*elapsedTime/1000.0;
-        }
-        if (pressedKeys[39]){ // Right
-            model.yRot += Math.PI/3*elapsedTime/1000.0;
-        }
-        if (pressedKeys[37]){ // Left
-            model.yRot += -Math.PI/3*elapsedTime/1000.0;
-        }
-        model.draw();
-        //console.log(model.xRot);
-        
-     }
-     
-     requestAnimationFrame(renderLoop);
-     lastTime = timeNow;
-}
+    }
+};
 
 
 //
