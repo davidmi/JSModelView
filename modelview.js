@@ -1,3 +1,4 @@
+/* global mat3, mat4: true */
 // modelview.js
 // David Iserovich 2012
 //
@@ -52,8 +53,8 @@ var mvMatrix = mat4.create();
 var mvMatrixStack = [];
 
 // Projection matrix
-var pMatrix = mat4.create();
-var orthoMatrix = mat4.create();
+window.pMatrix = mat4.create();
+window.orthoMatrix = mat4.create();
 
 // Key states
 var pressedKeys = [];
@@ -241,7 +242,11 @@ function updateTexture(texture) {
         gl.UNSIGNED_BYTE, texture.video);
 }
 
+//XXX: Refactor to updateTextureCanvas(glTexture, canvas)
+// for clarity
 function updateTextureCanvas(texture){
+    // Update a gl.TEXTURE_2D object with a canvas store in its
+    // texture.image property
     "use strict";
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -323,107 +328,113 @@ function mvPushMatrix() {
     mvMatrixStack.push(copy);
 }
 
-
-function loadObj(e) {
+function loadObj(callback){ 
     "use strict";
-    var lines = e.target.result.split('\n');
+    return function(e) {
+        var lines = e.target.result.split('\n');
 
-    var vertices = [];
-    var vertexNormals = [];
-    var tris = [];
-    var normals = [];
-    var quads = [];
+        var vertices = [];
+        var vertexNormals = [];
+        var tris = [];
+        var normals = [];
+        var i,j,k;
 
-    var vertexIndices = [];
+        var vertexIndices = [];
 
-    for (var i = 0; i < lines.length; i++) {
+        for (i = 0; i < lines.length; i++) {
 
-        var params = lines[i].split(' ');
+            var params = lines[i].split(' ');
 
-        // Dump all defined vertices into an array
-        if (params[0] === 'v') {
-            vertices[vertices.length] = parseFloat(params[1]);
-            vertices[vertices.length] = parseFloat(params[2]);
-            vertices[vertices.length] = parseFloat(params[3]);
-        }
-
-        if (params[0] === 'vn') {
-            for (var j = 1; j < 4; j++) {
-                vertexNormals[vertexNormals.length] = parseFloat(params[j]);
+            // Dump all defined vertices into an array
+            if (params[0] === 'v') {
+                vertices[vertices.length] = parseFloat(params[1]);
+                vertices[vertices.length] = parseFloat(params[2]);
+                vertices[vertices.length] = parseFloat(params[3]);
             }
-        }
 
-        if (params[0] === 'f') {
-            var vertexCoords = [];
-            var normalCoords = [];
-
-            for (var k = 1; k < params.length; k++) {
-                var split = params[k].split("//");
-                vertexCoords[vertexCoords.length] = split[0];
-                if (split.length > 1) {
-                    normalCoords[normalCoords.length] = split[1];
+            if (params[0] === 'vn') {
+                for (j = 1; j < 4; j++) {
+                    vertexNormals[vertexNormals.length] = parseFloat(params[j]);
                 }
             }
-            //console.log(vertexCoords);
-            if (vertexCoords.length < 4) { // It's a triangle
-                // Load vertices
-                for (var k = 0; k < 9; k++) {
-                    tris[tris.length] = vertices[3 * parseInt(vertexCoords[Math.floor(k / 3)] - 1) + k % 3];
-                }
 
-                if (vertexNormals.length > 0) {
-                    // Load vertex normals
-                    for (var k = 0; k < 9; k++) {
-                        var normalIndex = 3 * parseInt(normalCoords[Math.floor(k / 3)] - 1) + k % 3;
-                        normals[normals.length] = vertexNormals[normalIndex];
+            if (params[0] === 'f') {
+                var vertexCoords = [];
+                var normalCoords = [];
+
+                for (k = 1; k < params.length; k++) {
+                    var split = params[k].split("//");
+                    vertexCoords[vertexCoords.length] = split[0];
+                    if (split.length > 1) {
+                        normalCoords[normalCoords.length] = split[1];
                     }
                 }
-
-                // Store the vertex indices, perhaps for later index-based rendering for quads
-                for (var j = 0; j < 3; j++) {
-                    vertexIndices[vertexIndices.length] = parseInt(vertexCoords[j], 10);
-                }
-
-            } else { // It's a quad.
-
-                // Order of vertices in a quad converted to two tris
-                var vertexOrder = [0, 1, 2, 2, 3, 0];
-
-                for (var j = 0; j < 3 * 6; j++) {
-                    tris[tris.length] = vertices[3 * (parseInt(vertexCoords[vertexOrder[Math.floor(j / 3)]], 10) - 1) + j % 3]; // 3*parseInt(vertexCoords[vertexOrder[Math.floor(j/3)]] - 1, 10) + j%3
-                }
-
-                // Get vertex normals for quads
-                if (vertexNormals.length > 0) {
-                    // get the first 3
-                    for (var j = 0; j < 18; j++) {
-                        var normalIndex = 3 * (parseInt(normalCoords[vertexOrder[Math.floor(j / 3)]], 10) - 1) + j % 3;
-                        normals[normals.length] = vertexNormals[normalIndex];
+                //console.log(vertexCoords);
+                if (vertexCoords.length < 4) { // It's a triangle
+                    // Load vertices
+                    for (k = 0; k < 9; k++) {
+                        tris[tris.length] = vertices[3 * parseInt(vertexCoords[Math.floor(k / 3)] - 1) + k % 3];
                     }
-                }
+
+                    if (vertexNormals.length > 0) {
+                        // Load vertex normals
+                        for (k = 0; k < 9; k++) {
+                            var normalIndex = 3 * parseInt(normalCoords[Math.floor(k / 3)] - 1) + k % 3;
+                            normals[normals.length] = vertexNormals[normalIndex];
+                        }
+                    }
+
+                    // Store the vertex indices, perhaps for later index-based rendering for quads
+                    for (j = 0; j < 3; j++) {
+                        vertexIndices[vertexIndices.length] = parseInt(vertexCoords[j], 10);
+                    }
+
+                } else { // It's a quad.
+
+                    // Order of vertices in a quad converted to two tris
+                    var vertexOrder = [0, 1, 2, 2, 3, 0];
+
+                    for (j = 0; j < 3 * 6; j++) {
+                        tris[tris.length] = vertices[3 * (parseInt(vertexCoords[vertexOrder[Math.floor(j / 3)]], 10) - 1) + j % 3]; // 3*parseInt(vertexCoords[vertexOrder[Math.floor(j/3)]] - 1, 10) + j%3
+                    }
+
+                    // Get vertex normals for quads
+                    if (vertexNormals.length > 0) {
+                        // get the first 3
+                        for (j = 0; j < 18; j++) {
+                            var normalIndex = 3 * (parseInt(normalCoords[vertexOrder[Math.floor(j / 3)]], 10) - 1) + j % 3;
+                            normals[normals.length] = vertexNormals[normalIndex];
+                        }
+                    }
 
 
-                // Assuming the quad is specified in circumferential order
-                for (var j = 0; j < 6; j++) {
-                    vertexIndices[vertexIndices.length] = parseInt(vertexCoords[vertexOrder[j]]);
+                    // Assuming the quad is specified in circumferential order
+                    for (j = 0; j < 6; j++) {
+                        vertexIndices[vertexIndices.length] = parseInt(vertexCoords[vertexOrder[j]]);
+                    }
                 }
             }
         }
-    }
 
-    console.log('vertices: ' + vertices);
-    initBuffers(vertices, vertexIndices, tris, normals);
-    //return [tris, quads, vertices, vertexIndices];
+        console.log('vertices: ' + vertices);
+
+        callback({
+            tris: tris,
+            vertexIndices: vertexIndices,
+            vertices: vertices,
+            normals: normals
+        });
+    };
 }
 
-
 // Read a file in the Wavefront OBJ format
-function readObj(file) {
+function readObj(file, callback) {
     "use strict";
 
     var reader = new FileReader();
-    reader.onload = loadObj;
+    reader.onload = loadObj(callback);
     reader.readAsText(file);
+    return reader;
 }
 
 
@@ -462,13 +473,20 @@ function Object3d(options) {
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.normals), gl.STATIC_DRAW);
     }
 
-    this.texCoords = options.texCoords || [];
+    // Either use the provided texture coordinates, or create default texture coordinates
+    if (options.texCoords){
+        this.texCoords = new Float32Array(options.texCoords);
+    }
+    else{
+        this.texCoords = new Float32Array(this.tris.length /3 * 2);
+    }
+
     this.texCoordsBuffer = gl.createBuffer();
 
     if (this.texCoords.length > 6) {
         this.hasTex = true;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordsBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.texCoords), gl.STATIC_DRAW);
+        gl.bufferData(gl.ARRAY_BUFFER, this.texCoords, gl.STATIC_DRAW);
         this.texCoordsBuffer.numItems = this.texCoords.length / 2;
         this.texCoordsBuffer.itemSize = 2;
     }
@@ -496,7 +514,10 @@ Object3d.prototype.draw = function() {
     "use strict";
     mvPushMatrix();
 
-    mat4.translate(mvMatrix, [this.x, this.y, this.z]);
+    if (!this.depth){
+      mat4.translate(mvMatrix, [this.x, this.y, this.z]);
+    }
+    // Rotate relative to self
     mat4.rotateX(mvMatrix, this.xRot);
     mat4.rotateY(mvMatrix, this.yRot);
     mat4.rotateZ(mvMatrix, this.zRot);
@@ -524,7 +545,20 @@ Object3d.prototype.draw = function() {
         gl.uniform1f(shaderProgram.alphaUniform, this.alpha);
         gl.uniform1f(shaderProgram.scaleUniform, this.scale);
 
+        if (this.depth){
+            gl.enable(gl.DEPTH_TEST);
+            // ortho and p inverted
+            orthoMatrix[8] = this.x;
+            orthoMatrix[9] = this.y;
+            gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, orthoMatrix);
+        }
+
         gl.drawArrays(gl.TRIANGLES, 0, this.triangleBuffer.numItems);
+
+        if (this.depth){
+            gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+            gl.disable(gl.DEPTH_TEST);
+        }
     }
 
     mvPopMatrix();
@@ -532,7 +566,118 @@ Object3d.prototype.draw = function() {
     // Set update time
 };
 
+Object3d.prototype.animate = function(elapsedTime, timeNow) {
+  "use strict";
+  if (this.animationCallback){
+    this.animationCallback(this, elapsedTime, timeNow);
+  }
+};
 
+window.Animations3d = {};
+
+window.Animations3d.toRadians = function(x){
+  return x / 180 * Math.PI % (2 * Math.PI);
+}
+
+window.Animations3d.rotateTo = function(xRot, yRot, zRot, timeMil, timeNow, done) {
+  "use strict";
+  var startTime =  timeNow || new Date().getTime();
+  var endTime = startTime + timeMil;
+  var timeLeft = endTime - startTime;
+  var cb = function(obj, elapsedTime, timeNow){
+    if (timeNow < endTime) {
+      obj.xRot = (obj.xRot + (xRot - obj.xRot) * elapsedTime/timeLeft) % (Math.PI * 2);
+      obj.yRot = (obj.yRot + (yRot - obj.yRot) * elapsedTime/timeLeft) % (Math.PI * 2);
+      obj.zRot = (obj.zRot + (zRot - obj.zRot) * elapsedTime/timeLeft) % (Math.PI * 2);
+    } else {
+      obj.xRot = xRot;
+      obj.yRot = yRot;
+      obj.zRot = zRot;
+      // Remove self
+      obj.animationCallback = undefined;
+      if (done) {
+        done();
+      }
+    }
+    
+    timeLeft = endTime - timeNow;
+  };
+
+  return cb;
+};
+
+
+window.Animations3d.moveTo = function(x, y, z, timeMil, timeNow, done) {
+  "use strict";
+  var startTime =  timeNow || new Date().getTime();
+  var endTime = startTime + timeMil;
+  var timeLeft = endTime - startTime;
+  var cb = function(obj, elapsedTime, timeNow){
+    if (timeNow < endTime) {
+      obj.x = (obj.x + (x - obj.x) * elapsedTime/timeLeft);
+      obj.y = (obj.y + (y - obj.y) * elapsedTime/timeLeft);
+      obj.z = (obj.z + (z - obj.z) * elapsedTime/timeLeft);
+    } else {
+      obj.x = x;
+      obj.y = y;
+      obj.z = z;
+      // Remove self
+      obj.animationCallback = undefined;
+      if (done) {
+        done();
+      }
+    }
+    
+    timeLeft = endTime - timeNow;
+  };
+
+  return cb;
+};
+
+window.Animations3d.popAnim = function(timeMil, origScale, timeNow, done) {
+  "use strict";
+  var startTime =  timeNow || new Date().getTime();
+  var endTime = startTime + timeMil;
+  var timeLeft = endTime - startTime;
+  var totalTime = endTime - startTime;
+  var cb = function(obj, elapsedTime, timeNow){
+    if (timeNow < endTime) {
+      obj.scale = origScale + origScale * Math.sin(Math.PI * (endTime - timeNow)/totalTime);
+    } else {
+      obj.scale = origScale;
+      // Remove self
+      obj.animationCallback = undefined;
+      if (done) {
+        done();
+      }
+    }
+    
+    timeLeft = endTime - timeNow;
+  };
+
+  return cb;
+};
+
+window.Animations3d.blink = function(rate, timeMil, done) {
+  "use strict";
+  timeMil = timeMil || 0;
+  rate = rate || 1;
+  var startTime =  timeNow || new Date().getTime();
+  var endTime = startTime + timeMil;
+  var cb = function(obj, elapsedTime, timeNow){
+    if (timeMil === 0 || timeNow < endTime) {
+        obj.alpha = Math.sin(rate * (timeNow / 1000 % 2) * Math.PI);
+    } else {
+        obj.alpha = 1;
+        obj.animationCallback = undefined;
+        if (done) {
+            done();
+        }
+    }
+  };
+
+  return cb;
+};
 
 // ## End Class Drawable3d
 
@@ -579,16 +724,13 @@ function initBuffers(vertices, vertexIndices, tris, normals) {
         inOrderTriBuffer.itemSize = 3;
         inOrderTriBuffer.numItems = tris.length / 3;
 
-        doneLoading = true;
-
         model = new Object3d({
             triArray: modelData,
             normalsArray: normals,
             x: 1,
             y: 0
         });
-
-        //renderLoop();
+        return model;
     }
 
 }
@@ -612,9 +754,6 @@ var Animation = {
             gl.clearColor(0.0, 0.0, 0.0, 1.0);
             // Clear the canvas
             gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-
-
             // Set up the view frustum
             // args:
             // 45 degrees vertical FOV
@@ -622,9 +761,9 @@ var Animation = {
             // Near clipping 0.1 gl units
             // Far clipping 100 gl units
             // Projection matrix
-            //mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+            mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, orthoMatrix);
             mat4.ortho(-1, 1, -1, 1, 0.1, 100, pMatrix);
-            mat4.ortho(-1, 1, -1, 1, 0.1, 100, orthoMatrix);
+            //mat4.ortho(-1, 1, -1, 1, 0.1, 100, orthoMatrix);
 
             // Set movement matrix to identity
             mat4.identity(mvMatrix);
@@ -644,14 +783,14 @@ var Animation = {
                 if (models[i].texImage.video) {
                     updateTexture(models[i].texImage);
                 }
+
+                models[i].animate(elapsedTime, timeNow);
                 models[i].draw();
             }
             //console.log(model.xRot);
-
-
-            requestAnimationFrame(Animation.renderLoop);
-            lastTime = timeNow;    
         }
+        requestAnimationFrame(Animation.renderLoop);
+        lastTime = timeNow;    
     }
 };
 

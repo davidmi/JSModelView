@@ -9,63 +9,74 @@
         </title>
         
         <script type="text/javascript" src="jquery-1.8.0.min.js"></script>
-		<script type="text/javascript" src="gl-matrix-min.js"></script>
+        <script type="text/javascript" src="gl-matrix-min.js"></script>
         <script type="text/javascript" src="modelview.js"></script>
-		
-		<script id="fragment-shader" type="x-shader/x-fragment">
-			precision mediump float;
+        <script id="fragment-shader" type="x-shader/x-fragment">
+            precision mediump float;
 
-			varying vec3 vLightWeighting;
-      varying float vAlpha;
-      varying vec2 vTexCoord;
+            varying vec3 vLightWeighting;
+            varying float vAlpha;
+            varying float color;
+            varying vec2 vTexCoord;
 
-      uniform sampler2D uSampler;
+            uniform sampler2D uSampler;
 
-			void main(void) {
-				// vec3 color = vec3(1.0, 0.0, 1.0);
-				// gl_FragColor = vec4( color * vLightWeighting, vAlpha);
-        vec4 color = texture2D(uSampler, vec2(vTexCoord.s, vTexCoord.t));
-        gl_FragColor = vec4(color.rgb, color.a * vAlpha);
-			}
-		</script>
-		<script id="vertex-shader" type="x-shader/x-vertex">
-      attribute vec2 aTexCoord;
-			attribute vec3 aVertexPosition;
-			attribute vec3 aVertexNormal;
+            void main(void) {
+                vec3 color = vec3(1.0, 0.0, 1.0);
+                gl_FragColor = vec4( color * vLightWeighting, vAlpha);
+            }
+        </script>
+        <script id="fragment-shader-textured" type="x-shader/x-fragment">
+            precision mediump float;
 
-			uniform mat4 uMVMatrix;
-			uniform mat4 uPMatrix;
-			uniform mat3 uNMatrix;
-      uniform float uAlpha;
-      uniform float uScale;
+            varying vec3 vLightWeighting;
+            varying float vAlpha;
+            varying vec2 vTexCoord;
 
-			varying vec3 vLightWeighting;
-      varying float vAlpha;
-      varying vec2 vTexCoord;
+            uniform sampler2D uSampler;
 
-			void main(void) {
-				vec3 lightDirecVector = vec3(1.0, 0, 0);
-				vec3 lightColor = vec3(1.0, 1.0, 1.0);
-				vec3 ambient = vec3(1.0, 1.0, .3);
-				vec3 transformedNormal = uNMatrix * normalize(aVertexNormal);
-				float directionLightWeighting = max(dot(transformedNormal , lightDirecVector), 0.0); // d
-				vLightWeighting = ambient + lightColor * directionLightWeighting;
-        vAlpha = uAlpha;
-        vTexCoord = aTexCoord;
+            void main(void) {
+                vec4 color = texture2D(uSampler, vec2(vTexCoord.s, vTexCoord.t));
+                gl_FragColor = vec4(color.rgb * vLightWeighting, color.a * vAlpha);
+            }
+        </script>
+        <script id="vertex-shader" type="x-shader/x-vertex">
+            attribute vec2 aTexCoord;
+            attribute vec3 aVertexPosition;
+            attribute vec3 aVertexNormal;
 
-			// Incorporate the Perspective and Model-View matrix
-				gl_Position = uPMatrix * uMVMatrix * vec4(uScale * aVertexPosition, 1.0);
-			}
-		</script>
+            uniform mat4 uMVMatrix;
+            uniform mat4 uPMatrix;
+            uniform mat3 uNMatrix;
+            uniform float uAlpha;
+            uniform float uScale;
 
+            varying vec3 vLightWeighting;
+            varying float vAlpha;
+            varying vec2 vTexCoord;
+
+            void main(void) {
+                vec3 lightDirecVector = vec3(1.0, 0, 0);
+                vec3 lightColor = vec3(1.0, 1.0, 1.0);
+                vec3 ambient = vec3(1.0, 1.0, .3);
+                vec3 transformedNormal = uNMatrix * normalize(aVertexNormal);
+                float directionLightWeighting = max(dot(transformedNormal , lightDirecVector), 0.0); // d
+                vLightWeighting = ambient + lightColor * directionLightWeighting;
+                vAlpha = uAlpha;
+                vTexCoord = aTexCoord;
+
+                // Incorporate the Perspective and Model-View matrix
+                gl_Position = uPMatrix * uMVMatrix * vec4(uScale * aVertexPosition, 1.0);
+            }
+        </script>
        
         <script type="text/javascript">
             function errlog(msg){
                 //Disable this and all calls to it in production
                 if (typeof console != 'undefined') {
                     console.log(msg);
-									
-					
+                                    
+                    
                 }
             }
 
@@ -142,34 +153,36 @@
             function loadModel(){
                 errlog(typeof document.getElementById("loadFile"));
                 errlog(typeof document.getElementById("loadFile"));
-                //readObj(document.getElementById("loadFile").files[0]);
-                //initBuffers(arr[2], arr[3]);		
+                var loadBuffers = function(objData){
+                    var model = initBuffers(objData.vertices, objData.vertexIndices, objData.tris, objData.normals);
+                    models.push(model);
+                    doneLoading = true;
+                }
+                val = readObj(document.getElementById("loadFile").files[0], loadBuffers);
+                //initBuffers(arr[2], arr[3]);      
 
-                models.push(createSprite(0.4, 0.4, 0.5, "tex.png"));
-                models.push(createVideoSprite(1.0, 1.0, 0.4, "test.webm"));
-
-
-                doneLoading = true;
+                //models.push(createSprite(0.4, 0.4, 0.5, "tex.png"));
+                //models.push(createVideoSprite(1.0, 1.0, 0.4, "test.webm"));
             }
-			
-			function parseHtmlToString(id){
-				var shaderScript = document.getElementById(id);
-				if (!shaderScript){
-					return null;
-				}
-				
-				// Just parse the text of the shader
-				var str = "";
-				var k = shaderScript.firstChild;
-				while (k) {
-					// 3 - TEXT_NODE
-					if (k.nodeType == 3){
-						str += k.textContent;
-					}
-					k = k.nextSibling;
-				}
-				
-				return str;
+            
+            function parseHtmlToString(id){
+                var shaderScript = document.getElementById(id);
+                if (!shaderScript){
+                    return null;
+                }
+                
+                // Just parse the text of the shader
+                var str = "";
+                var k = shaderScript.firstChild;
+                while (k) {
+                    // 3 - TEXT_NODE
+                    if (k.nodeType == 3){
+                        str += k.textContent;
+                    }
+                    k = k.nextSibling;
+                }
+                
+                return str;
             }
 
             var count = 0;
@@ -181,20 +194,20 @@
                 if (count < 2){
                     return;
                 }
-				
+                
                 // Start GL
-                initGL($("#game-view")[0]);				
+                initGL($("#game-view")[0]);             
 
                 // Try to load shaders, check if we're getting the shader text correctly
                 initShaders(vertexShader, fragmentShader);
 
                 gl.clearColor(0.0, 0.0, 0.0, 1.0);
-                //gl.enable(gl.DEPTH_TEST);
+                gl.enable(gl.DEPTH_TEST);
                 
-                renderLoop(renderCallback);
+                Animation.renderLoop();
 
                 document.onkeydown = handleKeyDown;
-                document.onkeyup = handleKeyUp;		
+                document.onkeyup = handleKeyUp;     
             }
 
             function startVideo() {
