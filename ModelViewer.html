@@ -196,7 +196,7 @@
                 }
                 
                 // Start GL
-                initGL($("#game-view")[0]);             
+                initGL($("#game-view")[0]);
 
                 // Try to load shaders, check if we're getting the shader text correctly
                 initShaders(vertexShader, fragmentShader);
@@ -209,16 +209,7 @@
                 document.onkeydown = handleKeyDown;
                 document.onkeyup = handleKeyUp;     
             }
-
-            function startVideo() {
-                console.log('playing video!');
-                videoElement.play();
-            }
-
-            function videoDone() {
-
-            }   
-		        
+                
             $(document).ready(function (){
                 errlog("This is a test");   
 
@@ -226,8 +217,8 @@
                 // Was loading this from another file, but this is inconvenient for
                 // running the app locally. Inlined shaders for now
                 //fragmentShader = data; 
-			    fragmentShader = $('#fragment-shader').text();
-					
+                fragmentShader = $('#fragment-shader').text();
+                    
                 callback();
                 //});
                 //$.get("vertex_shader.txt", undefined, function(data){

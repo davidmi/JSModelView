@@ -545,8 +545,8 @@ Object3d.prototype.draw = function() {
         gl.uniform1f(shaderProgram.alphaUniform, this.alpha);
         gl.uniform1f(shaderProgram.scaleUniform, this.scale);
 
-        if (this.depth){
-            gl.enable(gl.DEPTH_TEST);
+        if (this.no_depth){
+            gl.disable(gl.DEPTH_TEST);
             // ortho and p inverted
             orthoMatrix[8] = this.x;
             orthoMatrix[9] = this.y;
@@ -555,9 +555,9 @@ Object3d.prototype.draw = function() {
 
         gl.drawArrays(gl.TRIANGLES, 0, this.triangleBuffer.numItems);
 
-        if (this.depth){
+        if (this.no_depth){
             gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
-            gl.disable(gl.DEPTH_TEST);
+            gl.enable(gl.DEPTH_TEST);
         }
     }
 
