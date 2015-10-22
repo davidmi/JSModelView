@@ -542,9 +542,8 @@ Object3d.prototype.draw = function() {
 
         if (this.no_depth){
             gl.disable(gl.DEPTH_TEST);
-            // ortho and p inverted
-            orthoMatrix[8] = this.x;
-            orthoMatrix[9] = this.y;
+            window.orthoMatrix[8] = this.x;
+            window.orthoMatrix[9] = this.y;
             gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, orthoMatrix);
         }
 
@@ -570,9 +569,9 @@ Object3d.prototype.animate = function(elapsedTime, timeNow) {
 
 window.Animations3d = {};
 
-window.Animations3d.toRadians = function(x){
+window.Animations3d.toRadians = function(x) {
   return x / 180 * Math.PI % (2 * Math.PI);
-}
+};
 
 window.Animations3d.rotateTo = function(xRot, yRot, zRot, timeMil, timeNow, done) {
   "use strict";
@@ -753,9 +752,9 @@ var Animation = {
             // Near clipping 0.1 gl units
             // Far clipping 100 gl units
             // Projection matrix
-            mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+            mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, window.pMatrix);
             // Orthographic matrix for 2d elements
-            mat4.ortho(-1, 1, -1, 1, 0.1, 100, orthoMatrix);
+            mat4.ortho(-1, 1, -1, 1, 0.1, 100, window.orthoMatrix);
 
             // Set movement matrix to identity
             mat4.identity(mvMatrix);
@@ -775,6 +774,7 @@ var Animation = {
 
                 models[i].animate(elapsedTime, timeNow);
                 models[i].draw();
+            }
         }
         requestAnimationFrame(Animation.renderLoop);
         lastTime = timeNow;    

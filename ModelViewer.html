@@ -156,6 +156,9 @@
                 var loadBuffers = function(objData){
                     var model = initBuffers(objData.vertices, objData.vertexIndices, objData.tris, objData.normals);
                     models.push(model);
+                    //model.xRot = 90 * Math.PI/180;
+                    model.animationCallback = window.Animations3d.rotateTo(90 * Math.PI/180, 0, 0, 10000);
+                    
                     doneLoading = true;
                 }
                 val = readObj(document.getElementById("loadFile").files[0], loadBuffers);
