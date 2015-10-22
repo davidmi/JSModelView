@@ -1,4 +1,5 @@
-
+// game.js
+// Helper functions for programming a game
 
 function errlog(msg) {
     "use strict";

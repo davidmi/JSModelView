@@ -280,9 +280,7 @@ function initShaders(vShaderText, fShaderText) {
     gl.enableVertexAttribArray(shaderProgram.vertexNormalAttribute);
     gl.enableVertexAttribArray(shaderProgram.texCoordsAttribute);
 
-    //console.log("Got vertex position attribute " + shaderProgram.vertexPositionAttribute);
     //shaderProgram.vertexTextureCoordAttribute = gl.getAttribLocation(shaderProgram, "aTextureCoord");
-    //console.log("Got tex coord attr: " + shaderProgram.vertexTextureCoordAttribute);
 
     // Provide values for attribute with an array
     gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
@@ -369,7 +367,6 @@ function loadObj(callback){
                         normalCoords[normalCoords.length] = split[1];
                     }
                 }
-                //console.log(vertexCoords);
                 if (vertexCoords.length < 4) { // It's a triangle
                     // Load vertices
                     for (k = 0; k < 9; k++) {
@@ -415,8 +412,6 @@ function loadObj(callback){
                 }
             }
         }
-
-        console.log('vertices: ' + vertices);
 
         callback({
             tris: tris,
@@ -705,9 +700,6 @@ function initBuffers(vertices, vertexIndices, tris, normals) {
         gl.bindBuffer(gl.ARRAY_BUFFER, triBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
-        console.log(vertices);
-        console.log(vertexIndices);
-
         triBuffer.numItems = vertices.length / 3;
         triBuffer.itemSize = 3;
 
@@ -761,22 +753,19 @@ var Animation = {
             // Near clipping 0.1 gl units
             // Far clipping 100 gl units
             // Projection matrix
-            mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, orthoMatrix);
-            mat4.ortho(-1, 1, -1, 1, 0.1, 100, pMatrix);
-            //mat4.ortho(-1, 1, -1, 1, 0.1, 100, orthoMatrix);
+            mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, pMatrix);
+            // Orthographic matrix for 2d elements
+            mat4.ortho(-1, 1, -1, 1, 0.1, 100, orthoMatrix);
 
             // Set movement matrix to identity
             mat4.identity(mvMatrix);
             mat4.translate(mvMatrix, [0, 0.0, -8.0]);
-
-            //console.log("Found data");   
 
             timeNow = new Date().getTime();
 
             var elapsedTime = timeNow - lastTime;
 
             //updateTexture(window.videoTexture);
-
 
             Animation.callback(elapsedTime, timeNow);
             for (var i = 0; i < models.length; i++) {
@@ -786,8 +775,6 @@ var Animation = {
 
                 models[i].animate(elapsedTime, timeNow);
                 models[i].draw();
-            }
-            //console.log(model.xRot);
         }
         requestAnimationFrame(Animation.renderLoop);
         lastTime = timeNow;    
