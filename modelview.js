@@ -729,10 +729,10 @@ function initBuffers(vertices, vertexIndices, tris, normals) {
 //
 // The main loop, running in it's own (pseudo?)thread
 //
-var lastTime;
-var timeNow;
 
 var Animation = {
+    timeNow: new Date().getTime(),
+    lastTime: new Date().getTime(),
     callback: function () {}, // User sets this
 
     renderLoop: function() {
@@ -760,24 +760,24 @@ var Animation = {
             mat4.identity(mvMatrix);
             mat4.translate(mvMatrix, [0, 0.0, -8.0]);
 
-            timeNow = new Date().getTime();
+            Animation.timeNow = new Date().getTime();
 
-            var elapsedTime = timeNow - lastTime;
+            var elapsedTime = Animation.timeNow - Animation.lastTime;
 
             //updateTexture(window.videoTexture);
 
-            Animation.callback(elapsedTime, timeNow);
+            Animation.callback(elapsedTime, Animation.timeNow);
             for (var i = 0; i < models.length; i++) {
                 if (models[i].texImage.video) {
                     updateTexture(models[i].texImage);
                 }
 
-                models[i].animate(elapsedTime, timeNow);
+                models[i].animate(elapsedTime, Animation.timeNow);
                 models[i].draw();
             }
         }
         requestAnimationFrame(Animation.renderLoop);
-        lastTime = timeNow;    
+        Animation.lastTime = Animation.timeNow;    
     }
 };
 
